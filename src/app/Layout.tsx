@@ -5,6 +5,8 @@ import { cx } from '../shared/ui';
 import { useSession } from './session';
 import { useApp } from './store';
 import { useConnectionStatus } from './telemetry';
+import { ErrorBoundary } from './ErrorBoundary';
+import { useDiag } from './diagnostics';
 
 export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Central de Controle', icon: 'home' },
@@ -18,6 +20,7 @@ export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/conectividade', label: 'Conectividade', icon: 'plug' },
   { to: '/laboratorio', label: 'Laboratório', icon: 'flask' },
   { to: '/relatorios', label: 'Relatórios', icon: 'report' },
+  { to: '/captura', label: 'Captura e diagnóstico', icon: 'history' },
   { to: '/configuracoes', label: 'Configurações', icon: 'gear' },
   { to: '/manual', label: 'Manual Técnico', icon: 'book' },
 ];
@@ -46,6 +49,10 @@ export function Layout() {
   });
   const reduced = useApp((s) => s.reducedMotion);
   const validated = useApp((s) => s.devices.filter((d) => d.status === 'validado').length);
+  const online = useDiag((s) => s.online);
+  const capturing = useDiag((s) => s.capturing);
+  const captureCount = useDiag((s) => s.captureCount);
+  const errorCount = useDiag((s) => s.errors.filter((e) => e.level === 'erro' && Date.now() - e.at < 3600_000).length);
   const openAlerts = useApp((s) => s.alerts.filter((a) => !a.endedAt && !a.acknowledgedAt).length);
   const [open, setOpen] = useState(false);
   const loc = useLocation();
@@ -83,6 +90,14 @@ export function Layout() {
             >
               <Icon name={n.icon} className="h-[18px] w-[18px]" />
               <span className="flex-1">{n.label}</span>
+              {n.to === '/captura' && errorCount > 0 && (
+                <span
+                  className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
+                  title="Erros na última hora"
+                >
+                  {errorCount}
+                </span>
+              )}
               {n.to === '/diagnostico' && openAlerts > 0 && (
                 <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-ink-950">
                   {openAlerts}
@@ -136,6 +151,19 @@ export function Layout() {
               {lastSample ? new Date(lastSample).toLocaleTimeString('pt-BR') : '—'}
             </span>
           </div>
+          {!online && (
+            <span className="rounded bg-red-500/15 px-1.5 py-0.5 font-semibold text-red-300 ring-1 ring-red-500/40">
+              SEM INTERNET — dados locais e conexões USB/BLE continuam
+            </span>
+          )}
+          {capturing && (
+            <NavLink
+              to="/captura"
+              className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 font-semibold text-red-300 ring-1 ring-red-500/40"
+            >
+              <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /> GRAVANDO {captureCount}
+            </NavLink>
+          )}
           <div className="ml-auto text-slate-500">
             Telemetria REAL:{' '}
             <span className={validated ? 'text-emerald-300' : 'text-slate-300'}>
@@ -144,7 +172,9 @@ export function Layout() {
           </div>
         </header>
         <main className="min-h-0 flex-1 overflow-auto p-4 print:overflow-visible print:p-0">
-          <Outlet />
+          <ErrorBoundary resetKey={loc.pathname} area={loc.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

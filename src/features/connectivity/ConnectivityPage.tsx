@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useSession } from '../../app/session';
 import { useApp } from '../../app/store';
-import { ADAPTERS, manualEmgp, simulator, startSimulation, stopSimulation, useNow } from '../../app/telemetry';
+import { ADAPTERS, manualEmgp, serial, simulator, startSimulation, stopSimulation, useNow } from '../../app/telemetry';
 import { parseSamplesCsv } from '../../integrations/csv';
 import { BleEssAdapter, BleNusAdapter } from '../../integrations/hardware/BleAdapters';
-import { SerialAdapter } from '../../integrations/hardware/SerialAdapter';
+import { BAUD_RATES, SerialAdapter } from '../../integrations/hardware/SerialAdapter';
 import type { TelemetryAdapter } from '../../integrations/adapter';
 import { Button, Card, PageHeader, cx } from '../../shared/ui';
 import { DevicesPanel } from './DevicesPanel';
@@ -22,9 +22,9 @@ const INGEST_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_
 
 function support(a: TelemetryAdapter): string | null {
   if (a.id === 'usb-serial' && !SerialAdapter.supported())
-    return 'Navegador sem Web Serial (use Chrome/Edge no desktop)';
+    return 'USB indisponível neste navegador — use Chrome/Edge no computador ou o APK no celular';
   if ((a.id === 'ble-nus' || a.id === 'ble-ess') && !BleNusAdapter.supported())
-    return 'Navegador sem Web Bluetooth (use Chrome/Edge; no iPhone não é suportado)';
+    return 'Bluetooth indisponível neste navegador — use Chrome/Edge ou o APK (iPhone não suportado)';
   return null;
 }
 
@@ -115,6 +115,24 @@ export default function ConnectivityPage() {
                   <span>Amostras: {st.samplesReceived}</span>
                   <span>Última: {st.lastSampleAt ? new Date(st.lastSampleAt).toLocaleTimeString('pt-BR') : '—'}</span>
                   {a instanceof BleEssAdapter && a.devId && <span className="font-mono text-cyanx-300">{a.devId}</span>}
+                  {a === serial && (
+                    <select
+                      className="input w-auto py-0.5 text-xs"
+                      value={serial.baudRate}
+                      disabled={isOn}
+                      onChange={(e) => {
+                        serial.baudRate = Number(e.target.value);
+                        force((n) => n + 1);
+                      }}
+                      aria-label="Velocidade (baud)"
+                    >
+                      {BAUD_RATES.map((b) => (
+                        <option key={b} value={b}>
+                          {b} baud
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <div className="ml-auto">
                     {a.id === 'evs-direct' ? (
                       <Button onClick={() => a.connect().then(() => force((n) => n + 1))}>Testar</Button>

@@ -75,12 +75,9 @@ export function parseSamplesCsv(text: string): { samples: TelemetrySample[]; err
   return { samples, errors };
 }
 
+/** Salva/compartilha um arquivo (navegador: download; APK: compartilhamento do Android). */
 export function downloadText(filename: string, text: string, mime = 'text/csv;charset=utf-8') {
-  const blob = new Blob(['﻿' + text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  void import('../platform/files')
+    .then((m) => m.saveTextFile(filename, text, mime))
+    .catch((e) => import('../app/diagnostics').then((d) => d.reportError('exportacao', e, { arquivo: filename })));
 }

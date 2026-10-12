@@ -1,72 +1,58 @@
+import { openSerial, serialSupported, type SerialLink } from '../../platform/serial';
+import { isNative } from '../../platform/native';
 import { DeviceStreamAdapter } from './DeviceStreamAdapter';
 
-/** Gateway próprio via USB (Web Serial — Chrome/Edge em desktop). Recebe EMGP a 115200 baud. */
+export const BAUD_RATES = [9600, 19200, 38400, 57600, 115200, 230400, 460800] as const;
+
+/**
+ * Gateway próprio via USB serial. Navegador: Web Serial (Chrome/Edge desktop). APK: USB OTG nativo.
+ * Recebe EMGP; qualquer outro conteúdo fica registrado (console + captura) para análise.
+ */
 export class SerialAdapter extends DeviceStreamAdapter {
   id = 'usb-serial';
-  name = 'Gateway USB (Web Serial)';
+  name = 'Gateway USB (serial)';
   kind = 'gateway' as const;
   transport = 'serial' as const;
-  description = 'Lê linhas EMGP de um gateway próprio (ex.: ESP32) pela USB. Somente leitura.';
+  description = 'Lê linhas EMGP de um gateway próprio pela USB (no celular: cabo OTG). Somente leitura.';
   baudRate = 115200;
 
-  private port: SerialPort | null = null;
-  private reader: ReadableStreamDefaultReader<string> | null = null;
-  private closing = false;
+  private link: SerialLink | null = null;
 
   static supported() {
-    return typeof navigator !== 'undefined' && 'serial' in navigator;
+    return serialSupported();
   }
 
   async connect() {
-    if (!SerialAdapter.supported()) {
-      this.setState('erro', 'Web Serial indisponível — use Chrome ou Edge no computador');
+    if (!serialSupported()) {
+      this.setState('erro', 'USB serial indisponível — no computador use Chrome/Edge; no celular use o APK');
       this.log('error', this.st.message);
       return;
     }
     try {
-      this.setState('conectando', 'Selecione a porta…');
-      this.port = await navigator.serial!.requestPort();
-      await this.port.open({ baudRate: this.baudRate });
-      const info = this.port.getInfo();
-      this.setState(
-        'conectado',
-        `Porta aberta (${this.baudRate} baud${info.usbVendorId ? `, VID ${info.usbVendorId.toString(16)}` : ''})`,
-      );
-      this.log('info', this.st.message);
-      this.closing = false;
-      void this.readLoop();
+      this.setState('conectando', isNative() ? 'Autorize o acesso ao dispositivo USB…' : 'Selecione a porta…');
+      this.link = await openSerial(this.baudRate);
+      this.link.onData((b) => this.feedBytes(b));
+      this.link.onError((e) => {
+        this.setState('erro', `Conexão serial interrompida: ${e.message}`);
+        this.log('error', this.st.message);
+        this.link = null;
+      });
+      this.setState('conectado', this.link.label);
+      this.log('info', `Porta aberta: ${this.link.label}`);
     } catch (e) {
-      this.setState('erro', e instanceof Error ? e.message : String(e));
-      this.log('error', `Falha ao abrir porta: ${this.st.message}`);
-    }
-  }
-
-  private async readLoop() {
-    if (!this.port?.readable) return;
-    const decoder = new TextDecoderStream();
-    void this.port.readable.pipeTo(decoder.writable as WritableStream<Uint8Array>).catch(() => undefined);
-    this.reader = decoder.readable.getReader();
-    try {
-      for (;;) {
-        const { value, done } = await this.reader.read();
-        if (done) break;
-        if (value) this.feedText(value);
+      const msg = e instanceof Error ? e.message : String(e);
+      // Cancelar o seletor não é erro do programa
+      if (/No port selected|cancel/i.test(msg)) this.setState('desconectado', 'Seleção cancelada');
+      else {
+        this.setState('erro', msg);
+        this.log('error', `Falha ao abrir porta: ${msg}`);
       }
-    } catch (e) {
-      if (!this.closing) {
-        this.setState('erro', 'Conexão serial interrompida');
-        this.log('error', `Leitura interrompida: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    } finally {
-      this.reader?.releaseLock();
     }
   }
 
   async disconnect() {
-    this.closing = true;
-    await this.reader?.cancel().catch(() => undefined);
-    await this.port?.close().catch(() => undefined);
-    this.port = null;
+    await this.link?.close().catch(() => undefined);
+    this.link = null;
     this.setState('desconectado', 'Porta fechada');
     this.log('info', 'Porta serial fechada');
   }
