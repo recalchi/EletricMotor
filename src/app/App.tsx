@@ -19,6 +19,7 @@ const MaintenancePage = lazy(() => import('../features/maintenance/MaintenancePa
 const ConnectivityPage = lazy(() => import('../features/connectivity/ConnectivityPage'));
 const LabPage = lazy(() => import('../features/simulator/LabPage'));
 const ReportsPage = lazy(() => import('../features/reports/ReportsPage'));
+const TechnicalReport = lazy(() => import('../features/reports/TechnicalReport'));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 const ManualPage = lazy(() => import('../features/manual/ManualPage'));
 
@@ -56,6 +57,7 @@ function Gate() {
             <Route path="conectividade" element={<ConnectivityPage />} />
             <Route path="laboratorio" element={<LabPage />} />
             <Route path="relatorios" element={<ReportsPage />} />
+            <Route path="relatorios/tecnico" element={<TechnicalReport />} />
             <Route path="configuracoes" element={<SettingsPage />} />
             <Route path="manual" element={<ManualPage />} />
             <Route path="*" element={<DashboardPage />} />

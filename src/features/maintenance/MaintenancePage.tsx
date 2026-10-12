@@ -3,9 +3,10 @@ import { useApp } from '../../app/store';
 import { useCollection } from '../../data/hooks';
 import { maintenanceDue } from '../../domain/alerts';
 import { CATALOG, getComponent } from '../../domain/catalog';
-import type { MaintenanceRecord, ManualInspection } from '../../domain/types';
+import type { MaintenanceRecord, ManualInspection, Photo } from '../../domain/types';
 import { Button, Card, Field, PageHeader, cx } from '../../shared/ui';
 import { Icon } from '../../shared/ui/icons';
+import { PhotoInput, PhotoStrip } from '../../shared/ui/photos';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -22,11 +23,13 @@ export default function MaintenancePage() {
     parts: '',
     costBRL: '',
     workshop: '',
+    photos: [] as Photo[],
   });
   const [i, setI] = useState({
     componentId: 'tire-front',
     condition: 'ok' as ManualInspection['condition'],
     notes: '',
+    photos: [] as Photo[],
   });
 
   const withRules = CATALOG.filter((c) => c.maintenanceRule);
@@ -75,7 +78,7 @@ export default function MaintenancePage() {
             onSubmit={(e) => {
               e.preventDefault();
               recs.add({ ...m, odometerKm: Number(m.odometerKm) || 0, costBRL: Number(m.costBRL) || 0 });
-              setM({ ...m, description: '', parts: '', costBRL: '' });
+              setM({ ...m, description: '', parts: '', costBRL: '', photos: [] });
             }}
           >
             <Field label="Data">
@@ -151,6 +154,11 @@ export default function MaintenancePage() {
                 />
               </Field>
             </div>
+            <div className="col-span-2">
+              <Field label="Fotos (nota fiscal, peça, serviço)">
+                <PhotoInput value={m.photos} onChange={(photos) => setM({ ...m, photos })} />
+              </Field>
+            </div>
             <div className="col-span-2 flex items-end">
               <Button variant="primary" type="submit">
                 Salvar registro
@@ -188,6 +196,7 @@ export default function MaintenancePage() {
                     <td>
                       {r.description}
                       {r.workshop && <div className="text-xs text-slate-500">{r.workshop}</div>}
+                      <PhotoStrip photos={r.photos} />
                     </td>
                     <td className="text-xs">{r.parts}</td>
                     <td className="text-right">R$ {r.costBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -215,7 +224,7 @@ export default function MaintenancePage() {
           onSubmit={(e) => {
             e.preventDefault();
             insp.add({ ...i, date: today() });
-            setI({ ...i, notes: '' });
+            setI({ ...i, notes: '', photos: [] });
           }}
         >
           <Field label="Componente">
@@ -248,6 +257,9 @@ export default function MaintenancePage() {
           <Button variant="primary" type="submit">
             Registrar inspeção
           </Button>
+          <div className="col-span-2 md:col-span-4">
+            <PhotoInput value={i.photos} onChange={(photos) => setI({ ...i, photos })} />
+          </div>
         </form>
         <ul className="grid gap-1.5 text-sm md:grid-cols-2">
           {[...insp.items]
@@ -265,6 +277,7 @@ export default function MaintenancePage() {
                   <span className="ml-2 text-xs text-slate-500">
                     {x.date} {x.notes && `· ${x.notes}`}
                   </span>
+                  <PhotoStrip photos={x.photos} />
                 </span>
                 <button
                   onClick={() => insp.remove(x.id)}

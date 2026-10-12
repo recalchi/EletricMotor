@@ -51,11 +51,11 @@ export function Layout() {
   useEffect(() => setOpen(false), [loc.pathname]);
 
   return (
-    <div className={cx('flex h-full', reduced && 'reduce-motion')}>
+    <div className={cx('flex h-full print:block print:h-auto', reduced && 'reduce-motion')}>
       {/* Sidebar */}
       <aside
         className={cx(
-          'fixed inset-y-0 left-0 z-40 w-60 shrink-0 border-r border-ink-700 bg-ink-950/95 p-3 transition-transform lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 w-60 print:hidden shrink-0 border-r border-ink-700 bg-ink-950/95 p-3 transition-transform lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -100,9 +100,9 @@ export function Layout() {
       </aside>
       {open && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col print:block">
         {/* Header */}
-        <header className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-ink-700 bg-ink-950/70 px-4 py-2 text-xs backdrop-blur">
+        <header className="print:hidden flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-ink-700 bg-ink-950/70 px-4 py-2 text-xs backdrop-blur">
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
             <Icon name="menu" className="h-5 w-5" />
           </button>
@@ -139,7 +139,7 @@ export function Layout() {
             Telemetria REAL: <span className="text-slate-300">nenhuma interface validada</span>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-auto p-4">
+        <main className="min-h-0 flex-1 overflow-auto p-4 print:overflow-visible print:p-0">
           <Outlet />
         </main>
       </div>

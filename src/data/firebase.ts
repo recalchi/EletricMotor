@@ -1,6 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 /** Configuração WEB pública (não é segredo administrativo). Vem de .env.local. */
 const config = {
@@ -18,11 +19,13 @@ export const firebaseConfigured = Boolean(config.apiKey && config.projectId && c
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 
 if (firebaseConfigured) {
   app = initializeApp(config);
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
   // Analytics apenas em navegadores suportados e fora do modo de teste.
   if (config.measurementId && import.meta.env.MODE !== 'test') {
     import('firebase/analytics')
@@ -33,4 +36,4 @@ if (firebaseConfigured) {
   }
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };

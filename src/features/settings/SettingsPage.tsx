@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from '../../app/session';
 import { useApp } from '../../app/store';
 import { useVehicleSettings } from '../../app/vehicleData';
+import { audit } from '../../data/hooks';
 import type { VehicleProfile } from '../../domain/types';
 import { Button, Card, Field, PageHeader } from '../../shared/ui';
 
@@ -45,7 +46,17 @@ export default function SettingsPage() {
             onSubmit={async (e) => {
               e.preventDefault();
               setVehicle(v);
-              await repo?.setDoc('vehicle', v);
+              if (repo) {
+                await repo.setDoc('vehicle', v);
+                await audit(
+                  repo,
+                  session?.email ?? session?.displayName ?? 'desconhecido',
+                  'atualizar',
+                  'vehicle',
+                  v.id,
+                  `Perfil: ${v.name}`,
+                );
+              }
               flash('Veículo salvo.');
             }}
           >

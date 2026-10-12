@@ -1,8 +1,10 @@
+import { Link } from 'react-router-dom';
 import { useApp } from '../../app/store';
 import { useCollection } from '../../data/hooks';
 import { CATALOG, getComponent } from '../../domain/catalog';
 import { COVERAGE_LABEL } from '../../domain/coverage';
 import type {
+  AuditEntry,
   ChargingSession,
   MaintenanceRecord,
   ManualBatteryReading,
@@ -22,6 +24,8 @@ export default function ReportsPage() {
   const reads = useCollection<ManualBatteryReading>('batteryReadings');
   const symptoms = useCollection<Symptom>('symptoms');
   const alerts = useApp((s) => s.alerts);
+  const auditLog = useCollection<AuditEntry>('auditLog');
+  const auditSorted = [...auditLog.items].sort((a, b) => b.at - a.at);
 
   const reports = [
     {
@@ -99,8 +103,21 @@ export default function ReportsPage() {
     <div className="space-y-3">
       <PageHeader
         title="Relatórios"
-        subtitle="Exportação CSV com unidades, intervalo e origem dos dados. Relatório PDF: pendente (próxima fase)."
+        subtitle="Relatório técnico em PDF e exportações CSV com unidades, intervalo e origem dos dados."
       />
+      <Card title="Relatório técnico (PDF)">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-2xl text-sm text-slate-400">
+            Documento consolidado: baterias, cobertura de monitoramento, serviços e custos, inspeções com fotos,
+            recargas, sintomas, alertas com origem e especificações pendentes. Filtro por período.
+          </p>
+          <Link to="/relatorios/tecnico">
+            <Button variant="primary">
+              <Icon name="printer" /> Abrir relatório técnico
+            </Button>
+          </Link>
+        </div>
+      </Card>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {reports.map((r) => (
           <Card key={r.name} title={r.name}>
@@ -117,6 +134,47 @@ export default function ReportsPage() {
           </Card>
         ))}
       </div>
+      <Card
+        title="Trilha de auditoria"
+        right={
+          <Button
+            disabled={!auditSorted.length}
+            onClick={() =>
+              downloadText(
+                `auditoria-${stamp()}.csv`,
+                toCsv(
+                  auditSorted.map((a) => ({ ...a, at_utc: new Date(a.at).toISOString() })),
+                  ['at_utc', 'actor', 'action', 'collection', 'docId', 'summary'],
+                ),
+              )
+            }
+          >
+            <Icon name="download" /> CSV
+          </Button>
+        }
+      >
+        {auditSorted.length ? (
+          <ul className="max-h-72 space-y-0.5 overflow-auto text-xs">
+            {auditSorted.slice(0, 200).map((a) => (
+              <li key={a.id} className="flex gap-2">
+                <span className="font-mono text-slate-500">{new Date(a.at).toLocaleString('pt-BR')}</span>
+                <span
+                  className={
+                    a.action === 'excluir' ? 'text-red-300' : a.action === 'criar' ? 'text-emerald-300' : 'text-sky-300'
+                  }
+                >
+                  {a.action}
+                </span>
+                <span className="text-slate-300">{a.collection}</span>
+                <span className="truncate text-slate-400">{a.summary}</span>
+                <span className="ml-auto text-slate-500">{a.actor}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-400">Nenhuma alteração registrada ainda.</p>
+        )}
+      </Card>
     </div>
   );
 }
