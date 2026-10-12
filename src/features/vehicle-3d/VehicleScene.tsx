@@ -22,9 +22,12 @@ function CameraRig({ preset, nonce }: { preset: CameraPreset; nonce: number }) {
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update(): void } | null;
   const goal = useRef<THREE.Vector3 | null>(null);
   const reduced = useApp((s) => s.reducedMotion);
+  const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));
   useEffect(() => {
-    goal.current = new THREE.Vector3(...PRESETS[preset]);
-  }, [preset, nonce]);
+    // Em telas estreitas (celular) afasta a câmera para a moto inteira caber no quadro
+    const k = Math.max(1, 1.45 / aspect);
+    goal.current = new THREE.Vector3(...PRESETS[preset]).sub(TARGET).multiplyScalar(k).add(TARGET);
+  }, [preset, nonce, aspect]);
   useFrame((_, dt) => {
     if (!goal.current) return;
     const k = reduced ? 1 : Math.min(1, dt * 4);
@@ -119,7 +122,7 @@ export function VehicleScene({
             target={TARGET}
             enableDamping
             minDistance={1}
-            maxDistance={7}
+            maxDistance={9}
             maxPolarAngle={Math.PI / 2 - 0.02}
             autoRotate={autoRotate && !reduced}
             autoRotateSpeed={0.6}
