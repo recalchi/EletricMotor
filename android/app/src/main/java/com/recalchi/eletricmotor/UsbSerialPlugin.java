@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 import android.util.Base64;
@@ -67,6 +68,50 @@ public class UsbSerialPlugin extends Plugin implements SerialInputOutputManager.
         for (UsbSerialDriver d : drivers()) arr.put(describe(d));
         JSObject ret = new JSObject();
         ret.put("devices", arr);
+        call.resolve(ret);
+    }
+
+    /**
+     * Inventário de TODOS os dispositivos USB vistos pelo celular (modo host/OTG), com ou sem driver serial.
+     * Só lê descritores — não abre conexão. Usado pelo scanner para diferenciar "porta só de carga"
+     * de "dispositivo de dados sem driver conhecido".
+     */
+    @PluginMethod
+    public void listAllUsb(PluginCall call) {
+        JSArray arr = new JSArray();
+        List<UsbSerialDriver> serial = drivers();
+        for (UsbDevice dev : usb().getDeviceList().values()) {
+            JSObject o = new JSObject();
+            o.put("deviceId", dev.getDeviceId());
+            o.put("vendorId", dev.getVendorId());
+            o.put("productId", dev.getProductId());
+            o.put("deviceClass", dev.getDeviceClass());
+            try {
+                o.put("manufacturer", dev.getManufacturerName());
+                o.put("product", dev.getProductName());
+            } catch (SecurityException ignored) {
+                // alguns aparelhos exigem permissão para ler os textos do descritor
+            }
+            JSArray ifaces = new JSArray();
+            for (int i = 0; i < dev.getInterfaceCount(); i++) {
+                UsbInterface it = dev.getInterface(i);
+                JSObject io = new JSObject();
+                io.put("class", it.getInterfaceClass());
+                io.put("subclass", it.getInterfaceSubclass());
+                io.put("protocol", it.getInterfaceProtocol());
+                io.put("endpoints", it.getEndpointCount());
+                ifaces.put(io);
+            }
+            o.put("interfaces", ifaces);
+            boolean hasSerial = false;
+            for (UsbSerialDriver d : serial) if (d.getDevice().getDeviceId() == dev.getDeviceId()) hasSerial = true;
+            o.put("serialDriver", hasSerial);
+            o.put("permission", usb().hasPermission(dev));
+            arr.put(o);
+        }
+        JSObject ret = new JSObject();
+        ret.put("devices", arr);
+        ret.put("hostSupported", getContext().getPackageManager().hasSystemFeature("android.hardware.usb.host"));
         call.resolve(ret);
     }
 

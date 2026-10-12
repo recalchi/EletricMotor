@@ -12,7 +12,9 @@ O APK empacota o mesmo app web com o Capacitor e acrescenta acesso **nativo** a:
 Tudo é **somente leitura**: não existe função que envie dados ao dispositivo conectado.
 
 ## Ativar o login (uma vez, no Firebase Console)
+
 Projeto `eletricmotorz` → **Authentication → Sign-in method**:
+
 1. Ative **E-mail/senha** e **Google** (sem isso aparece “Método de login não habilitado”).
 2. **Configurações do projeto → Seus apps → Adicionar app → Android**:
    - Nome do pacote: `com.recalchi.eletricmotorz`
@@ -32,6 +34,23 @@ No app, “Continuar com Google” abre o seletor de contas do Android; o token 
 4. Para USB: conecte o gateway com um **cabo/adaptador OTG**; o Android pergunta se o EletricMotor pode acessar o dispositivo — aceite.
 
 > APK de **depuração** assinado pelo autor (certificado `CN=Renan Recalchi`). A chave (`.jks`) e as senhas (`android/keystore.properties`) ficam **fora do git**; sem elas o build usa a chave de debug padrão. Guarde o `.jks` — atualizações só instalam por cima se assinadas com a mesma chave.
+
+## Scanner automático (botão na Central e aba “Scanner”)
+
+Um toque faz, só recebendo dados (nada é enviado à moto):
+
+1. inicia a gravação de captura;
+2. lista os aparelhos **pareados** (inclui Bluetooth clássico, como o áudio do painel);
+3. escuta **anúncios BLE** por 15 s (nome, sinal, serviços, dados de fabricante);
+4. abre os **candidatos** com pistas fortes (nome VOLTZ/EVS, nomes típicos de BMS, canais UART BLE) e, por 20 s, lê as características e assina as notificações;
+5. faz o **inventário USB** (todos os dispositivos, com VID/PID e classe);
+6. mostra as **conclusões** em linguagem simples, com “Monitorar ao vivo” para o que enviou dados.
+
+### O que já sabemos do teste na EVS (12/10/2026)
+
+- O painel aparece como **“VOLTZ” em Bluetooth clássico**, com os perfis Chamadas, Áudio e Contatos. É o recurso de música/telefone do painel, não um canal de telemetria.
+- Na **porta USB da moto** o Android não detectou nenhum dispositivo de dados: ela só fornece carga (5 V).
+- Não há projeto público de código aberto nem documentação de protocolo da Voltz EVS. O app oficial (Hello Voltz) e o “Smart Controller” enviam dados para a nuvem da Voltz, por um caminho não documentado. Por isso o scanner registra tudo para análise, e nada vira leitura REAL sem validação.
 
 ## Roteiro de teste no celular
 

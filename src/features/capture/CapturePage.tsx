@@ -133,7 +133,7 @@ function Recorder() {
   );
 }
 
-function Explorer() {
+export function Explorer() {
   const [st, setSt] = useState<ExplorerState>(bleExplorer.state);
   const [extra, setExtra] = useState('');
   const capturing = useDiag((s) => s.capturing);

@@ -1,5 +1,5 @@
 import { capture, reportError, toHex } from '../../app/diagnostics';
-import { requestBle, type BleLink, type GattServiceInfo } from '../../platform/ble';
+import { connectBleById, requestBle, type BleLink, type GattServiceInfo } from '../../platform/ble';
 import { asciiPreview, charName, decodeKnown, serviceName, WEB_EXPLORE_SERVICES } from '../../platform/gattNames';
 import { normalizeUuid } from '../../platform/native';
 
@@ -57,11 +57,24 @@ export class BleExplorer {
   }
 
   async explore(extraServices: string[] = [], subscribe = true) {
+    const optional = [...WEB_EXPLORE_SERVICES, ...extraServices.map(normalizeUuid)];
+    return this.run(
+      () => requestBle({ acceptAll: true, optionalServices: optional }),
+      subscribe,
+      'Selecione o dispositivo…',
+    );
+  }
+
+  /** Explora um dispositivo já identificado (ex.: pela varredura automática), sem seletor. */
+  async exploreDevice(id: string, name: string, subscribe = true) {
+    return this.run(() => connectBleById(id, name), subscribe, `Conectando a ${name}…`);
+  }
+
+  private async run(open: () => Promise<BleLink>, subscribe: boolean, waitMsg: string): Promise<boolean> {
     await this.stop();
-    this.set({ status: 'conectando', services: [], message: 'Selecione o dispositivo…', device: undefined });
+    this.set({ status: 'conectando', services: [], message: waitMsg, device: undefined });
     try {
-      const optional = [...WEB_EXPLORE_SERVICES, ...extraServices.map(normalizeUuid)];
-      this.link = await requestBle({ acceptAll: true, optionalServices: optional });
+      this.link = await open();
       const link = this.link;
       link.onDisconnect(() => {
         this.set({ status: 'desconectado', message: 'Dispositivo desconectou' });
@@ -125,6 +138,7 @@ export class BleExplorer {
         status: 'ativo',
         message: `${services.length} serviço(s), ${total} característica(s). ${this.unsubs.length} notificação(ões) assinada(s).`,
       });
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (/cancel|chooser/i.test(msg)) this.set({ status: 'idle', message: 'Seleção cancelada' });
@@ -132,6 +146,7 @@ export class BleExplorer {
         this.set({ status: 'erro', message: msg });
         reportError('ble-explorer', e);
       }
+      return false;
     }
   }
 

@@ -14,6 +14,7 @@ import { ComponentPanel } from '../components/ComponentPanel';
 import { ComponentTree } from '../components/ComponentTree';
 import { SceneToolbar, SensorLegend } from '../vehicle-3d/SceneToolbar';
 import { VehicleScene, type CameraPreset } from '../vehicle-3d/VehicleScene';
+import { ScanHero } from '../scanner/ScannerPage';
 
 function Kpi({
   icon,
@@ -81,6 +82,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-3">
       {conn.tone === 'sim' && <SimulationBanner />}
+
+      {/* Ação principal: descobrir e monitorar automaticamente */}
+      <ScanHero compact />
 
       {/* Faixa de indicadores */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">

@@ -23,6 +23,7 @@ const TechnicalReport = lazy(() => import('../features/reports/TechnicalReport')
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage'));
 const ManualPage = lazy(() => import('../features/manual/ManualPage'));
 const CapturePage = lazy(() => import('../features/capture/CapturePage'));
+const ScannerPage = lazy(() => import('../features/scanner/ScannerPage'));
 
 /** Carrega o perfil do veículo persistido para o store. */
 function VehicleLoader() {
@@ -73,6 +74,7 @@ function Gate() {
             <Route path="configuracoes" element={<SettingsPage />} />
             <Route path="manual" element={<ManualPage />} />
             <Route path="captura" element={<CapturePage />} />
+            <Route path="scanner" element={<ScannerPage />} />
             <Route path="*" element={<DashboardPage />} />
           </Route>
         </Routes>

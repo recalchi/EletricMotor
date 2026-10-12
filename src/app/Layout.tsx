@@ -10,6 +10,7 @@ import { useDiag } from './diagnostics';
 
 export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Central de Controle', icon: 'home' },
+  { to: '/scanner', label: 'Scanner automático', icon: 'radar' },
   { to: '/explorador', label: 'Explorador 3D', icon: 'cube' },
   { to: '/diagnostico', label: 'Diagnóstico', icon: 'alert' },
   { to: '/baterias', label: 'Baterias', icon: 'battery' },
@@ -28,9 +29,9 @@ export const NAV: { to: string; label: string; icon: IconName }[] = [
 /** Atalhos da barra inferior no celular (o restante fica em "Mais"). */
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Central', icon: 'home' },
+  { to: '/scanner', label: 'Scanner', icon: 'radar' },
   { to: '/explorador', label: '3D', icon: 'cube' },
   { to: '/diagnostico', label: 'Alertas', icon: 'alert' },
-  { to: '/conectividade', label: 'Conectar', icon: 'plug' },
 ];
 
 function pageTitle(pathname: string) {

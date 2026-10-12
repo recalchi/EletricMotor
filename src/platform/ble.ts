@@ -142,13 +142,18 @@ async function requestNative(req: BleRequest): Promise<BleLink> {
           namePrefix: req.namePrefix,
         },
   );
+  return nativeLink(device.deviceId, device.name ?? device.deviceId);
+}
+
+async function nativeLink(deviceId: string, name: string): Promise<BleLink> {
+  const device = { deviceId };
   const disconnectCbs: (() => void)[] = [];
   const onDisc = () => disconnectCbs.forEach((c) => c());
   await BleClient.connect(device.deviceId, onDisc, { timeout: 15000 });
 
   return {
     id: device.deviceId,
-    name: device.name ?? device.deviceId,
+    name,
     async services() {
       const svcs: BleService[] = await BleClient.getServices(device.deviceId);
       return svcs.map((s) => ({
@@ -183,4 +188,85 @@ async function requestNative(req: BleRequest): Promise<BleLink> {
       await BleClient.disconnect(device.deviceId).catch(() => undefined);
     },
   };
+}
+
+// ───────────────────────── Varredura automática (somente APK)
+
+export interface BleAdvert {
+  id: string;
+  name: string | null;
+  rssi: number | null;
+  txPower: number | null;
+  uuids: string[];
+  /** id do fabricante (Bluetooth SIG, decimal) → bytes em hex */
+  manufacturer: Record<string, string>;
+  serviceData: Record<string, string>;
+  raw: string | null;
+  seen: number;
+}
+
+const hexOf = (v?: DataView) =>
+  v
+    ? Array.from(new Uint8Array(v.buffer, v.byteOffset, v.byteLength), (b) => b.toString(16).padStart(2, '0')).join(' ')
+    : '';
+
+async function ensureEnabled() {
+  await ensureInit();
+  if (!(await BleClient.isEnabled())) {
+    await BleClient.requestEnable().catch(() => undefined);
+    if (!(await BleClient.isEnabled())) throw new Error('Bluetooth desligado — ative o Bluetooth do celular');
+  }
+}
+
+/**
+ * Escuta anúncios BLE por `ms` milissegundos sem conectar em nada (recepção passiva).
+ * Chama `onUpdate` a cada anúncio; devolve a lista final.
+ */
+export async function scanBle(ms: number, onUpdate?: (all: BleAdvert[]) => void, signal?: AbortSignal) {
+  if (!isNative()) throw new Error('Varredura automática disponível apenas no app Android');
+  await ensureEnabled();
+  const found = new Map<string, BleAdvert>();
+  await BleClient.requestLEScan({ allowDuplicates: true }, (r) => {
+    const prev = found.get(r.device.deviceId);
+    const manufacturer: Record<string, string> = { ...(prev?.manufacturer ?? {}) };
+    for (const [k, v] of Object.entries(r.manufacturerData ?? {})) manufacturer[k] = hexOf(v);
+    const serviceData: Record<string, string> = { ...(prev?.serviceData ?? {}) };
+    for (const [k, v] of Object.entries(r.serviceData ?? {})) serviceData[k] = hexOf(v);
+    found.set(r.device.deviceId, {
+      id: r.device.deviceId,
+      name: r.localName ?? r.device.name ?? prev?.name ?? null,
+      rssi: r.rssi ?? prev?.rssi ?? null,
+      txPower: r.txPower ?? prev?.txPower ?? null,
+      uuids: [...new Set([...(prev?.uuids ?? []), ...(r.uuids ?? [])])],
+      manufacturer,
+      serviceData,
+      raw: r.rawAdvertisement ? hexOf(r.rawAdvertisement) : (prev?.raw ?? null),
+      seen: (prev?.seen ?? 0) + 1,
+    });
+    onUpdate?.([...found.values()]);
+  });
+  await new Promise<void>((res) => {
+    const t = setTimeout(res, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(t);
+      res();
+    });
+  });
+  await BleClient.stopLEScan().catch(() => undefined);
+  return [...found.values()];
+}
+
+/** Dispositivos pareados no Android (inclui Bluetooth clássico, ex.: áudio do painel). */
+export async function bondedBle(): Promise<{ id: string; name: string | null }[]> {
+  if (!isNative()) return [];
+  await ensureEnabled();
+  const list = await BleClient.getBondedDevices();
+  return list.map((d) => ({ id: d.deviceId, name: d.name ?? null }));
+}
+
+/** Conecta (somente leitura) a um dispositivo encontrado na varredura. */
+export async function connectBleById(id: string, name: string): Promise<BleLink> {
+  if (!isNative()) throw new Error('Conexão direta disponível apenas no app Android');
+  await ensureEnabled();
+  return nativeLink(id, name);
 }

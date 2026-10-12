@@ -72,8 +72,20 @@ interface UsbDeviceInfo {
   name: string;
   driver: string;
 }
+export interface UsbAnyDevice {
+  deviceId: number;
+  vendorId: number;
+  productId: number;
+  deviceClass: number;
+  manufacturer?: string | null;
+  product?: string | null;
+  interfaces: { class: number; subclass: number; protocol: number; endpoints: number }[];
+  serialDriver: boolean;
+  permission: boolean;
+}
 interface UsbSerialPlugin {
   listDevices(): Promise<{ devices: UsbDeviceInfo[] }>;
+  listAllUsb(): Promise<{ devices: UsbAnyDevice[]; hostSupported: boolean }>;
   open(opts: { deviceId?: number; baudRate: number }): Promise<{ device: UsbDeviceInfo }>;
   close(): Promise<void>;
   addListener(event: 'data', cb: (d: { base64: string }) => void): Promise<PluginListenerHandle>;
@@ -81,6 +93,26 @@ interface UsbSerialPlugin {
 }
 
 export const UsbSerial = registerPlugin<UsbSerialPlugin>('UsbSerial');
+
+/** Inventário USB (somente APK). No navegador retorna null. */
+export async function listUsbInventory(): Promise<{ devices: UsbAnyDevice[]; hostSupported: boolean } | null> {
+  if (!isNative()) return null;
+  return UsbSerial.listAllUsb();
+}
+
+/** Nomes das classes USB padrão (usb.org) — só para exibição. */
+export const USB_CLASS: Record<number, string> = {
+  0x01: 'Áudio',
+  0x02: 'Comunicação (CDC)',
+  0x03: 'HID (teclado/controle)',
+  0x07: 'Impressora',
+  0x08: 'Armazenamento',
+  0x09: 'Hub',
+  0x0a: 'Dados CDC',
+  0x0e: 'Vídeo',
+  0xe0: 'Sem fio (Bluetooth/rádio)',
+  0xff: 'Específica do fabricante',
+};
 
 const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
