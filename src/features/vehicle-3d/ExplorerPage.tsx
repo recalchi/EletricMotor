@@ -9,10 +9,10 @@ export default function ExplorerPage() {
   const [preset, setPreset] = useState<CameraPreset>('iso');
   const [nonce, setNonce] = useState(0);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col lg:h-full">
       <PageHeader
         title="Explorador 3D"
-        subtitle="Rotação 360°, zoom, seleção, isolamento, transparência e vista explodida. Arraste para orbitar, role para zoom."
+        subtitle="Arraste para girar, use dois dedos (ou a roda do mouse) para zoom e toque numa peça para ver a ficha."
       />
       <div className="mb-2">
         <SceneToolbar
@@ -22,15 +22,16 @@ export default function ExplorerPage() {
           }}
         />
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[240px_1fr_340px]">
-        <div className="panel min-h-[240px] p-3 lg:min-h-0">
+      <div className="grid grid-cols-1 gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[240px_1fr_340px]">
+        <div className="panel order-2 max-h-[320px] min-h-[240px] p-3 lg:order-none lg:max-h-none lg:min-h-0">
           <ComponentTree className="h-full" />
         </div>
-        <div className="panel relative min-h-[420px] overflow-hidden">
+        {/* No celular o 3D vem primeiro, depois a ficha da peça e a árvore */}
+        <div className="panel relative order-first h-[380px] overflow-hidden sm:h-auto sm:min-h-[420px] lg:order-none">
           <VehicleScene preset={preset} presetNonce={nonce} />
           <SensorLegend />
         </div>
-        <div className="panel min-h-0 overflow-auto p-4">
+        <div className="panel order-1 min-h-0 overflow-auto p-4 lg:order-none">
           <ComponentPanel />
         </div>
       </div>

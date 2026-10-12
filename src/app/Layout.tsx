@@ -25,6 +25,21 @@ export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/manual', label: 'Manual Técnico', icon: 'book' },
 ];
 
+/** Atalhos da barra inferior no celular (o restante fica em "Mais"). */
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Central', icon: 'home' },
+  { to: '/explorador', label: '3D', icon: 'cube' },
+  { to: '/diagnostico', label: 'Alertas', icon: 'alert' },
+  { to: '/conectividade', label: 'Conectar', icon: 'plug' },
+];
+
+function pageTitle(pathname: string) {
+  const hit = [...NAV]
+    .sort((a, b) => b.to.length - a.to.length)
+    .find((n) => (n.to === '/' ? pathname === '/' : pathname.startsWith(n.to)));
+  return hit?.label ?? 'EletricMotor';
+}
+
 function Logo() {
   return (
     <div className="flex items-center gap-2">
@@ -36,6 +51,20 @@ function Logo() {
         <div className="text-[10px] tracking-[0.3em] text-cyanx-400">VOLTZ EVS</div>
       </div>
     </div>
+  );
+}
+
+function Count({ n, tone }: { n: number; tone: 'red' | 'amber' }) {
+  if (!n) return null;
+  return (
+    <span
+      className={cx(
+        'rounded-full px-1.5 text-[10px] font-bold leading-4',
+        tone === 'red' ? 'bg-red-500 text-white' : 'bg-amber-500 text-ink-950',
+      )}
+    >
+      {n}
+    </span>
   );
 }
 
@@ -57,23 +86,55 @@ export function Layout() {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  const inTabs = TABS.some((t) => (t.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(t.to)));
+
+  const connDot = (
+    <span
+      className={cx(
+        'h-2 w-2 shrink-0 rounded-full',
+        conn.tone === 'ok' ? 'bg-emerald-400' : conn.tone === 'sim' ? 'animate-pulse bg-amber-400' : 'bg-slate-500',
+      )}
+    />
+  );
 
   return (
     <div className={cx('flex h-full print:block print:h-auto', reduced && 'reduce-motion')}>
-      {/* Sidebar */}
+      {/* Menu lateral (gaveta no celular) */}
       <aside
         className={cx(
-          'fixed inset-y-0 left-0 z-40 w-60 print:hidden shrink-0 border-r border-ink-700 bg-ink-950/95 p-3 transition-transform lg:static lg:translate-x-0',
-          open ? 'translate-x-0' : '-translate-x-full',
+          'pt-safe fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-ink-700 bg-ink-950 p-3 transition-transform print:hidden lg:static lg:w-60 lg:translate-x-0 lg:bg-ink-950/95',
+          open ? 'translate-x-0 shadow-2xl shadow-black' : '-translate-x-full',
         )}
+        aria-label="Menu"
       >
-        <div className="mb-5 flex items-center justify-between px-1 pt-1">
+        <div className="mb-4 flex items-center justify-between px-1 pt-1">
           <Logo />
-          <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu">
-            <Icon name="x" />
+          <button
+            className="-mr-1 rounded-md p-2 text-slate-400 hover:text-white lg:hidden"
+            onClick={() => setOpen(false)}
+            aria-label="Fechar menu"
+          >
+            <Icon name="x" className="h-5 w-5" />
           </button>
         </div>
-        <nav className="space-y-0.5" aria-label="Principal">
+
+        {/* Situação resumida — no celular ela sai do cabeçalho e vem para cá */}
+        <div className="mb-3 space-y-1 rounded-md border border-ink-700 bg-ink-900/60 p-2.5 text-xs lg:hidden">
+          <div className="truncate text-slate-200">
+            {vehicle.name} <span className="text-slate-500">· {vehicle.model}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-300">
+            {connDot} {conn.label}
+          </div>
+          <div className="text-slate-500">
+            Telemetria REAL:{' '}
+            <span className={validated ? 'text-emerald-300' : 'text-slate-300'}>
+              {validated ? `${validated} validado(s)` : 'nenhum dispositivo validado'}
+            </span>
+          </div>
+        </div>
+
+        <nav className="no-scrollbar -mx-1 min-h-0 flex-1 space-y-0.5 overflow-y-auto px-1" aria-label="Principal">
           {NAV.map((n) => (
             <NavLink
               key={n.to}
@@ -81,7 +142,7 @@ export function Layout() {
               end={n.to === '/'}
               className={({ isActive }) =>
                 cx(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition',
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition lg:py-2',
                   isActive
                     ? 'bg-cyanx-500/10 text-cyanx-300 shadow-glow'
                     : 'text-slate-400 hover:bg-ink-800 hover:text-slate-200',
@@ -90,38 +151,70 @@ export function Layout() {
             >
               <Icon name={n.icon} className="h-[18px] w-[18px]" />
               <span className="flex-1">{n.label}</span>
-              {n.to === '/captura' && errorCount > 0 && (
-                <span
-                  className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
-                  title="Erros na última hora"
-                >
-                  {errorCount}
-                </span>
-              )}
-              {n.to === '/diagnostico' && openAlerts > 0 && (
-                <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-ink-950">
-                  {openAlerts}
-                </span>
-              )}
+              {n.to === '/captura' && <Count n={errorCount} tone="red" />}
+              {n.to === '/diagnostico' && <Count n={openAlerts} tone="amber" />}
             </NavLink>
           ))}
         </nav>
-        <div className="absolute inset-x-3 bottom-3 rounded-md border border-ink-700 p-2 text-xs text-slate-400">
+        <div className="pb-safe mt-3 rounded-md border border-ink-700 p-2.5 text-xs text-slate-400">
           <div className="truncate text-slate-300">{session?.displayName}</div>
-          <div className="mb-2">{session?.mode === 'demo' ? 'Modo demonstração (local)' : 'Firebase'}</div>
-          <button onClick={logout} className="flex items-center gap-1.5 text-slate-400 hover:text-white">
+          <div className="mb-2 truncate">
+            {session?.mode === 'demo' ? 'Modo demonstração (local)' : (session?.email ?? 'Firebase')}
+          </div>
+          <button onClick={logout} className="flex items-center gap-1.5 py-1 text-slate-400 hover:text-white">
             <Icon name="logout" /> Sair
           </button>
         </div>
       </aside>
-      {open && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
+      {open && (
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px] lg:hidden" onClick={() => setOpen(false)} />
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
-        {/* Header */}
-        <header className="print:hidden flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-ink-700 bg-ink-950/70 px-4 py-2 text-xs backdrop-blur">
-          <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
-            <Icon name="menu" className="h-5 w-5" />
-          </button>
+        {/* Cabeçalho do celular: título da tela + estado essencial */}
+        <header className="pt-safe sticky top-0 z-30 border-b border-ink-700 bg-ink-950/90 backdrop-blur print:hidden lg:hidden">
+          <div className="flex h-12 items-center gap-2 px-2">
+            <button
+              className="rounded-md p-2 text-slate-300 active:bg-ink-800"
+              onClick={() => setOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Icon name="menu" className="h-5 w-5" />
+            </button>
+            <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">{pageTitle(loc.pathname)}</h1>
+            {capturing && (
+              <NavLink
+                to="/captura"
+                className="flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-1 text-[11px] font-semibold text-red-300 ring-1 ring-red-500/40"
+                aria-label={`Gravando ${captureCount} registros`}
+              >
+                <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /> {captureCount}
+              </NavLink>
+            )}
+            <span
+              className={cx(
+                'flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] ring-1',
+                conn.tone === 'ok'
+                  ? 'text-emerald-300 ring-emerald-500/40'
+                  : conn.tone === 'sim'
+                    ? 'font-semibold text-amber-300 ring-amber-400/40'
+                    : 'text-slate-400 ring-ink-600',
+              )}
+              title={conn.label}
+            >
+              {connDot}
+              {conn.tone === 'ok' ? 'Ao vivo' : conn.tone === 'sim' ? 'Simulação' : 'Offline'}
+            </span>
+          </div>
+          {!online && (
+            <div className="bg-red-500/15 px-3 py-1 text-center text-[11px] font-semibold text-red-300">
+              Sem internet — dados locais e conexões USB/BLE continuam
+            </div>
+          )}
+        </header>
+
+        {/* Cabeçalho do computador */}
+        <header className="hidden flex-wrap items-center gap-x-5 gap-y-1 border-b border-ink-700 bg-ink-950/70 px-4 py-2 text-xs backdrop-blur print:hidden lg:flex">
           <div>
             <span className="text-slate-500">Veículo </span>
             <span className="font-medium text-slate-200">{vehicle.name}</span>
@@ -131,16 +224,7 @@ export function Layout() {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span
-              className={cx(
-                'h-2 w-2 rounded-full',
-                conn.tone === 'ok'
-                  ? 'bg-emerald-400'
-                  : conn.tone === 'sim'
-                    ? 'animate-pulse bg-amber-400'
-                    : 'bg-slate-500',
-              )}
-            />
+            {connDot}
             <span className={conn.tone === 'sim' ? 'font-semibold text-amber-300' : 'text-slate-300'}>
               {conn.label}
             </span>
@@ -171,12 +255,65 @@ export function Layout() {
             </span>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-auto p-4 print:overflow-visible print:p-0">
+
+        <main className="min-h-0 flex-1 overflow-auto p-3 pb-24 sm:p-4 lg:pb-4 print:overflow-visible print:p-0">
           <ErrorBoundary resetKey={loc.pathname} area={loc.pathname}>
             <Outlet />
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Barra inferior (celular) */}
+      <nav
+        className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 backdrop-blur print:hidden lg:hidden"
+        aria-label="Atalhos"
+      >
+        <div className="grid h-16 grid-cols-5">
+          {TABS.map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              end={t.to === '/'}
+              className={({ isActive }) =>
+                cx(
+                  'relative flex flex-col items-center justify-center gap-1 text-[11px] transition active:bg-ink-800',
+                  isActive ? 'text-cyanx-300' : 'text-slate-400',
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && <span className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-cyanx-400 shadow-glow" />}
+                  <span className="relative">
+                    <Icon name={t.icon} className="h-[22px] w-[22px]" />
+                    {t.to === '/diagnostico' && openAlerts > 0 && (
+                      <span className="absolute -right-2.5 -top-1.5">
+                        <Count n={openAlerts} tone="amber" />
+                      </span>
+                    )}
+                  </span>
+                  {t.label}
+                </>
+              )}
+            </NavLink>
+          ))}
+          <button
+            className={cx(
+              'relative flex flex-col items-center justify-center gap-1 text-[11px] transition active:bg-ink-800',
+              !inTabs || open ? 'text-cyanx-300' : 'text-slate-400',
+            )}
+            onClick={() => setOpen(true)}
+            aria-label="Mais telas"
+          >
+            {!inTabs && <span className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-cyanx-400 shadow-glow" />}
+            <span className="relative">
+              <Icon name="menu" className="h-[22px] w-[22px]" />
+              {errorCount > 0 && <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-red-500" />}
+            </span>
+            Mais
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

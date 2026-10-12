@@ -55,7 +55,7 @@ export default function ConnectivityPage() {
         subtitle="Firebase não se conecta diretamente à moto. Toda leitura passa por um adaptador somente-leitura e por um dispositivo validado."
       />
       <Card title="Fluxo de dados">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-col gap-1.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           {[
             ['Sensores externos / gateway próprio', `${devices.length} cadastrado(s)`, devices.length ? 'ok' : 'amber'],
             ['Transporte', 'USB · BLE · HTTPS', 'ok'],
@@ -65,7 +65,7 @@ export default function ConnectivityPage() {
             ['Telemetria REAL', validated ? 'ativa' : 'aguardando validação', validated ? 'ok' : 'amber'],
             ['Interface interna da EVS', 'bloqueada (não documentada)', 'amber'],
           ].map(([t, s, tone], i, arr) => (
-            <div key={t} className="flex items-center gap-2">
+            <div key={t} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
               <div
                 className={cx(
                   'rounded border px-2 py-1.5',
@@ -75,22 +75,26 @@ export default function ConnectivityPage() {
                 <div className="font-medium text-slate-200">{t}</div>
                 <div className={tone === 'ok' ? 'text-cyanx-300' : 'text-amber-300'}>{s}</div>
               </div>
-              {i < arr.length - 1 && <span className="text-cyanx-400">→</span>}
+              {i < arr.length - 1 && <span className="self-center text-cyanx-400 max-sm:rotate-90">→</span>}
             </div>
           ))}
         </div>
       </Card>
 
       <Card title="Adaptadores">
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {ADAPTERS.filter((a) => a !== manualEmgp).map((a) => {
             const st = a.status();
             const unsupported = support(a);
             const isOn = a === simulator ? running : st.state === 'conectado' || st.state === 'conectando';
             return (
-              <div key={a.id} className="rounded-md border border-ink-700 p-3 text-sm" data-testid={`adapter-${a.id}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div>
+              <div
+                key={a.id}
+                className="min-w-0 rounded-md border border-ink-700 p-3 text-sm"
+                data-testid={`adapter-${a.id}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
                     <div className="font-medium text-slate-200">{a.name}</div>
                     <div className="text-xs text-slate-500">
                       {a.kind} · v{st.version}
@@ -98,7 +102,7 @@ export default function ConnectivityPage() {
                   </div>
                   <span
                     className={cx(
-                      'text-xs font-semibold uppercase',
+                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase bg-ink-800',
                       STATE_STYLE[a === simulator && running ? 'conectado' : st.state],
                     )}
                   >
@@ -111,7 +115,7 @@ export default function ConnectivityPage() {
                 {a.id === 'cloud-live' && session?.mode !== 'firebase' && (
                   <p className="mt-1 text-xs text-amber-300">Requer login Firebase.</p>
                 )}
-                <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
                   <span>Amostras: {st.samplesReceived}</span>
                   <span>Última: {st.lastSampleAt ? new Date(st.lastSampleAt).toLocaleTimeString('pt-BR') : '—'}</span>
                   {a instanceof BleEssAdapter && a.devId && <span className="font-mono text-cyanx-300">{a.devId}</span>}
@@ -151,9 +155,9 @@ export default function ConnectivityPage() {
 
       <DevicesPanel />
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <TestConsole />
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <Card title="Injetar mensagem EMGP (sem hardware)">
             <p className="mb-2 text-xs text-slate-400">
               Cole uma ou mais linhas no formato do gateway. Útil para conferir cadastro e mapeamento. Se o dispositivo

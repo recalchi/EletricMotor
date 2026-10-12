@@ -136,7 +136,7 @@ export function Button({
     <button
       {...p}
       className={cx(
-        'inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition disabled:opacity-40',
+        'em-btn inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition disabled:opacity-40',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyanx-400',
         v,
         className,
@@ -172,7 +172,7 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-wide text-white">{title}</h1>
+        <h1 className="hidden text-xl font-semibold tracking-wide text-white lg:block">{title}</h1>
         {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
       </div>
       {right}

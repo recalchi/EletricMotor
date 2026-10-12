@@ -312,8 +312,8 @@ export default function CapturePage() {
         title="Captura e diagnóstico"
         subtitle="Grava tudo o que é recebido, explora dispositivos Bluetooth em modo somente leitura e registra erros do aplicativo para melhorias."
       />
-      <div className="grid gap-3 xl:grid-cols-2">
-        <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <div className="min-w-0 space-y-3">
           <Recorder />
           <ErrorLog />
           <Environment />

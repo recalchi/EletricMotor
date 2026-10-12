@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mesmo fundo do app web (tailwind ink-950) -->
+    <color name="app_background">#030A14</color>
+    <color name="colorPrimary">#030A14</color>
+    <color name="colorPrimaryDark">#030A14</color>
+    <color name="colorAccent">#22D3EE</color>
+</resources>

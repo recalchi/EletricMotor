@@ -31,10 +31,12 @@ function Kpi({
   digits?: number;
 }) {
   return (
-    <div className="panel flex items-center gap-3 px-3 py-2.5">
-      <Icon name={icon} className="h-7 w-7 shrink-0 text-cyanx-400" />
+    <div className="panel flex items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3">
+      <Icon name={icon} className="h-6 w-6 shrink-0 text-cyanx-400 sm:h-7 sm:w-7" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[10px] uppercase tracking-[0.14em] text-slate-400">{label}</div>
+        <div className="text-[10px] uppercase leading-tight tracking-[0.08em] text-slate-400 sm:truncate sm:tracking-[0.14em]">
+          {label}
+        </div>
         <div className={cx('font-mono text-xl tabular-nums', dv.value == null ? 'text-slate-500' : 'text-white')}>
           {fmtValue(dv.value, digits)}
           {dv.value != null && <span className="ml-1 text-xs text-slate-400">{dv.unit}</span>}
@@ -43,7 +45,7 @@ function Kpi({
         <div className="mt-1 flex flex-wrap items-center gap-1">
           <OriginBadge origin={dv.origin} />
           {dv.stale && <StaleBadge />}
-          {extra && <span className="truncate text-[10px] text-slate-500">{extra}</span>}
+          {extra && <span className="text-[10px] leading-tight text-slate-500">{extra}</span>}
         </div>
       </div>
     </div>
@@ -106,7 +108,7 @@ export default function DashboardPage() {
         <div className="panel hidden max-h-[560px] p-3 2xl:block">
           <ComponentTree className="h-full" />
         </div>
-        <div className="panel relative h-[460px] overflow-hidden xl:h-[560px]">
+        <div className="panel relative h-[400px] overflow-hidden sm:h-[460px] xl:h-[560px]">
           <div className="absolute inset-x-2 top-10 z-10">
             <SceneToolbar
               onPreset={(p) => {

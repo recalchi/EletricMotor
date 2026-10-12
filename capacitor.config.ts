@@ -8,8 +8,16 @@ const config: CapacitorConfig = {
   android: {
     // WebView carregado em https://localhost (domínio já autorizado no Firebase Auth)
     allowMixedContent: false,
+    backgroundColor: '#030a14',
+    // Android 15+ desenha atrás das barras do sistema: o Capacitor ajusta as margens do WebView
+    adjustMarginsForEdgeToEdge: 'auto',
   },
   plugins: {
+    // Login Google nativo; a sessão é criada no Firebase JS SDK (signInWithCredential)
+    FirebaseAuthentication: {
+      skipNativeAuth: true,
+      providers: ['google.com'],
+    },
     BluetoothLe: {
       displayStrings: {
         scanning: 'Procurando dispositivos…',

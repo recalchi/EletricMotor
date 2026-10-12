@@ -7,6 +7,11 @@ $env:ANDROID_HOME = 'D:\DevTools\android-sdk'
 $env:GRADLE_USER_HOME = 'D:\DevTools\gradle-home'
 
 Set-Location $root
+# O login Google nativo inicializa o Firebase Android a partir deste arquivo; sem ele o app fecharia ao abrir.
+$gs = Join-Path $root 'android\app\google-services.json'
+if (-not (Test-Path $gs)) {
+  throw "Falta $gs (Firebase Console > Configurações do projeto > app Android). Veja docs/android.md."
+}
 npm run build
 if ($LASTEXITCODE -ne 0) { throw 'Falha no build web' }
 npx cap sync android

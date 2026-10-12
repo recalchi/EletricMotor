@@ -4,11 +4,13 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithCredential,
   signInWithPopup,
   signOut,
   type User,
 } from 'firebase/auth';
 import { auth, firebaseConfigured } from '../data/firebase';
+import { isNative } from '../platform/native';
 import { FirestoreRepository, LocalRepository, type Repository } from '../data/repository';
 
 export const VEHICLE_ID = 'evs-1';
@@ -93,6 +95,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     async signInGoogle() {
       if (!auth) throw new Error('Firebase não configurado');
+      if (isNative()) {
+        // No APK o popup não funciona no WebView: login Google nativo (Credential Manager) e o
+        // idToken é entregue ao Firebase JS SDK — a sessão continua sendo a mesma do app web.
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const r = await FirebaseAuthentication.signInWithGoogle();
+        const idToken = r.credential?.idToken;
+        if (!idToken) throw new Error('Login Google não retornou credencial.');
+        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+        return;
+      }
       await signInWithPopup(auth, new GoogleAuthProvider());
     },
     async logout() {
@@ -100,6 +112,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(DEMO_KEY);
       } catch {
         /* ignore */
+      }
+      if (isNative()) {
+        try {
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+          await FirebaseAuthentication.signOut();
+        } catch {
+          /* sem sessão nativa */
+        }
       }
       if (auth?.currentUser) await signOut(auth);
       setSession(null);
@@ -128,5 +148,13 @@ export function authErrorMessage(e: unknown): string {
     'auth/popup-closed-by-user': 'Janela de login fechada.',
     'auth/unauthorized-domain': 'Domínio não autorizado no Firebase Console (Authentication → Settings).',
   };
-  return map[code] ?? (e instanceof Error ? e.message : 'Erro desconhecido');
+  if (map[code]) return map[code];
+  const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? '');
+  // Erros do login Google nativo (Android Credential Manager)
+  if (/cancel/i.test(msg)) return 'Login Google cancelado.';
+  if (/no credentials|NoCredential/i.test(msg))
+    return 'Nenhuma conta Google disponível ou app Android não registrado no Firebase (SHA-1). Veja docs/android.md.';
+  if (/developer_error|10:|default_web_client_id/i.test(msg))
+    return 'Login Google não configurado para o app Android (google-services.json / SHA-1). Veja docs/android.md.';
+  return msg || 'Erro desconhecido';
 }

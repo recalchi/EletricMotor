@@ -131,7 +131,7 @@ export function VehicleScene({
         </Canvas>
       </GLBoundary>
       <div className="pointer-events-none absolute left-3 top-3 rounded border border-amber-400/40 bg-ink-950/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-amber-300">
-        MODELO PROVISÓRIO — aproximação geométrica, não é CAD
+        MODELO PROVISÓRIO<span className="hidden sm:inline"> — aproximação geométrica, não é CAD</span>
       </div>
     </div>
   );
