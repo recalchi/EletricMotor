@@ -12,7 +12,8 @@ export type CollectionName =
   | 'batteryReadings'
   | 'symptoms'
   | 'alerts'
-  | 'auditLog';
+  | 'auditLog'
+  | 'devices';
 
 export interface Repository {
   readonly kind: 'local' | 'firestore';
@@ -25,6 +26,11 @@ export interface Repository {
   /** Anexa foto (redimensionada). Modo demo: dataURL pequeno no localStorage; Firebase: Storage. */
   uploadPhoto(file: File): Promise<Photo>;
   deletePhoto(photo: Photo): Promise<void>;
+  /**
+   * Índice global deviceId → dono, usado pela função de ingestão para autenticar o gateway.
+   * `tokenHash` null remove o índice. No modo demo é ignorado (sem nuvem).
+   */
+  setDeviceIndex(deviceId: string, tokenHash: string | null): Promise<void>;
 }
 
 // ───────────────────────── Local (modo demonstração)
@@ -96,6 +102,9 @@ export class LocalRepository implements Repository {
   async deletePhoto() {
     /* dataURL é removido junto com o registro */
   }
+  async setDeviceIndex() {
+    /* modo demonstração não tem ingestão em nuvem */
+  }
 }
 
 // ───────────────────────── Firestore
@@ -151,6 +160,11 @@ export class FirestoreRepository implements Repository {
   async deletePhoto(photo: Photo) {
     if (!storage || photo.path.startsWith('local/')) return;
     await deleteObject(storageRef(storage, photo.path)).catch(() => undefined);
+  }
+  async setDeviceIndex(deviceId: string, tokenHash: string | null) {
+    const ref = doc(db!, 'deviceIndex', deviceId);
+    if (tokenHash == null) await deleteDoc(ref).catch(() => undefined);
+    else await setDoc(ref, { uid: this.uid, vehicleId: this.vehicleId, tokenHash, updatedAt: serverTimestamp() });
   }
 }
 

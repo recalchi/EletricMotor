@@ -1,7 +1,16 @@
 import { create } from 'zustand';
 import { DEFAULT_RULES, acknowledge, evaluate } from '../domain/alerts';
-import type { Alert, AlertRule, DataOrigin, Quantity, TelemetrySample, VehicleProfile } from '../domain/types';
+import type {
+  Alert,
+  AlertRule,
+  DataOrigin,
+  DeviceProfile,
+  Quantity,
+  TelemetrySample,
+  VehicleProfile,
+} from '../domain/types';
 import type { AdapterLogEntry } from '../integrations/adapter';
+import type { TestConsoleEntry } from '../integrations/hardware/DeviceStreamAdapter';
 import type { SimEvent } from '../integrations/simulator/engine';
 
 export type ViewMode = 'externo' | 'eletrico' | 'mecanico' | 'sensores';
@@ -52,6 +61,13 @@ interface AppState {
   pushLog(adapter: string, e: AdapterLogEntry): void;
   simEvents: SimEvent[];
   pushSimEvent(e: SimEvent): void;
+
+  // Dispositivos de aquisição e console de teste
+  devices: DeviceProfile[];
+  setDevices(d: DeviceProfile[]): void;
+  testConsole: TestConsoleEntry[];
+  pushTest(e: TestConsoleEntry): void;
+  clearTest(): void;
 }
 
 const emptyByOrigin = <T>(): Record<DataOrigin, Record<string, T>> => ({
@@ -129,4 +145,10 @@ export const useApp = create<AppState>((set) => ({
   pushLog: (adapter, e) => set((s) => ({ adapterLog: [{ ...e, adapter }, ...s.adapterLog].slice(0, 200) })),
   simEvents: [],
   pushSimEvent: (e) => set((s) => ({ simEvents: [e, ...s.simEvents].slice(0, 100) })),
+
+  devices: [],
+  setDevices: (devices) => set({ devices }),
+  testConsole: [],
+  pushTest: (e) => set((s) => ({ testConsole: [e, ...s.testConsole].slice(0, 200) })),
+  clearTest: () => set({ testConsole: [] }),
 }));

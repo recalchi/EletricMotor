@@ -1,8 +1,14 @@
 import { useState } from 'react';
+import { useSession } from '../../app/session';
 import { useApp } from '../../app/store';
-import { ADAPTERS, startSimulation, stopSimulation, useNow } from '../../app/telemetry';
+import { ADAPTERS, manualEmgp, simulator, startSimulation, stopSimulation, useNow } from '../../app/telemetry';
 import { parseSamplesCsv } from '../../integrations/csv';
+import { BleEssAdapter, BleNusAdapter } from '../../integrations/hardware/BleAdapters';
+import { SerialAdapter } from '../../integrations/hardware/SerialAdapter';
+import type { TelemetryAdapter } from '../../integrations/adapter';
 import { Button, Card, PageHeader, cx } from '../../shared/ui';
+import { DevicesPanel } from './DevicesPanel';
+import { TestConsole } from './TestConsole';
 
 const STATE_STYLE: Record<string, string> = {
   conectado: 'text-emerald-300',
@@ -12,29 +18,52 @@ const STATE_STYLE: Record<string, string> = {
   nao_implementado: 'text-amber-300',
 };
 
+const INGEST_URL = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '<projeto>'}.cloudfunctions.net/ingest`;
+
+function support(a: TelemetryAdapter): string | null {
+  if (a.id === 'usb-serial' && !SerialAdapter.supported())
+    return 'Navegador sem Web Serial (use Chrome/Edge no desktop)';
+  if ((a.id === 'ble-nus' || a.id === 'ble-ess') && !BleNusAdapter.supported())
+    return 'Navegador sem Web Bluetooth (use Chrome/Edge; no iPhone não é suportado)';
+  return null;
+}
+
 export default function ConnectivityPage() {
   useNow(1000);
+  const { session } = useSession();
   const log = useApp((s) => s.adapterLog);
   const running = useApp((s) => s.simRunning);
   const pushLog = useApp((s) => s.pushLog);
+  const devices = useApp((s) => s.devices);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [emgp, setEmgp] = useState('{"v":1,"dev":"esp32-hub","seq":1,"ch":{"t1":31.5}}');
+  const [, force] = useState(0);
+  const validated = devices.filter((d) => d.status === 'validado').length;
+
+  const toggle = async (a: TelemetryAdapter) => {
+    if (a === simulator) return running ? stopSimulation() : startSimulation();
+    const st = a.status().state;
+    if (st === 'conectado' || st === 'conectando') await a.disconnect();
+    else await a.connect();
+    force((n) => n + 1);
+  };
 
   return (
     <div className="space-y-3">
       <PageHeader
         title="Conectividade"
-        subtitle="Firebase não se conecta diretamente à moto. Toda leitura passa por um adaptador somente-leitura com contrato único."
+        subtitle="Firebase não se conecta diretamente à moto. Toda leitura passa por um adaptador somente-leitura e por um dispositivo validado."
       />
       <Card title="Fluxo de dados">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {[
-            ['Voltz EVS', 'interfaces a verificar', 'amber'],
-            ['Interface segura / gateway', 'não implementado', 'amber'],
-            ['Adaptador de protocolo', 'aguarda validação', 'amber'],
-            ['Normalização + origem', 'implementado', 'ok'],
-            ['Ingestão autenticada', 'pendente (Cloud Function)', 'amber'],
-            ['Firestore / séries', 'registros manuais', 'ok'],
-            ['App + gêmeo 3D', 'implementado', 'ok'],
+            ['Sensores externos / gateway próprio', `${devices.length} cadastrado(s)`, devices.length ? 'ok' : 'amber'],
+            ['Transporte', 'USB · BLE · HTTPS', 'ok'],
+            ['Protocolo EMGP v1', 'validação + sequência', 'ok'],
+            ['Mapeamento + calibração', 'canal → componente', 'ok'],
+            ['Validação do dispositivo', `${validated} validado(s)`, validated ? 'ok' : 'amber'],
+            ['Telemetria REAL', validated ? 'ativa' : 'aguardando validação', validated ? 'ok' : 'amber'],
+            ['Interface interna da EVS', 'bloqueada (não documentada)', 'amber'],
           ].map(([t, s, tone], i, arr) => (
             <div key={t} className="flex items-center gap-2">
               <div
@@ -50,71 +79,129 @@ export default function ConnectivityPage() {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[11px] text-slate-500">
-          Simulador e registros manuais entram na etapa de normalização com origem identificada.
-        </p>
       </Card>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Adaptadores">
-          <div className="space-y-2">
-            {ADAPTERS.map((a) => {
-              const st = a.status();
-              return (
-                <div key={a.id} className="rounded-md border border-ink-700 p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-slate-200">{a.name}</div>
-                      <div className="text-xs text-slate-500">
-                        {a.kind} · v{st.version}
-                      </div>
+      <Card title="Adaptadores">
+        <div className="grid gap-2 lg:grid-cols-2">
+          {ADAPTERS.filter((a) => a !== manualEmgp).map((a) => {
+            const st = a.status();
+            const unsupported = support(a);
+            const isOn = a === simulator ? running : st.state === 'conectado' || st.state === 'conectando';
+            return (
+              <div key={a.id} className="rounded-md border border-ink-700 p-3 text-sm" data-testid={`adapter-${a.id}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="font-medium text-slate-200">{a.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {a.kind} · v{st.version}
                     </div>
-                    <span className={cx('text-xs font-semibold uppercase', STATE_STYLE[st.state])}>
-                      {st.state.replace('_', ' ')}
-                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-400">{a.description}</p>
-                  {st.message && <p className="mt-1 text-xs text-slate-500">{st.message}</p>}
-                  <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
-                    <span>Amostras: {st.samplesReceived}</span>
-                    <span>Última: {st.lastSampleAt ? new Date(st.lastSampleAt).toLocaleTimeString('pt-BR') : '—'}</span>
-                    <div className="ml-auto flex gap-2">
-                      {a.kind === 'simulator' ? (
-                        <Button onClick={running ? stopSimulation : startSimulation}>
-                          {running ? 'Desconectar' : 'Conectar'}
-                        </Button>
-                      ) : (
-                        <Button onClick={() => a.connect()}>Testar comunicação</Button>
-                      )}
-                    </div>
+                  <span
+                    className={cx(
+                      'text-xs font-semibold uppercase',
+                      STATE_STYLE[a === simulator && running ? 'conectado' : st.state],
+                    )}
+                  >
+                    {(a === simulator && running ? 'conectado' : st.state).replace('_', ' ')}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{a.description}</p>
+                {st.message && <p className="mt-1 text-xs text-slate-500">{st.message}</p>}
+                {unsupported && <p className="mt-1 text-xs text-amber-300">{unsupported}</p>}
+                {a.id === 'cloud-live' && session?.mode !== 'firebase' && (
+                  <p className="mt-1 text-xs text-amber-300">Requer login Firebase.</p>
+                )}
+                <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                  <span>Amostras: {st.samplesReceived}</span>
+                  <span>Última: {st.lastSampleAt ? new Date(st.lastSampleAt).toLocaleTimeString('pt-BR') : '—'}</span>
+                  {a instanceof BleEssAdapter && a.devId && <span className="font-mono text-cyanx-300">{a.devId}</span>}
+                  <div className="ml-auto">
+                    {a.id === 'evs-direct' ? (
+                      <Button onClick={() => a.connect().then(() => force((n) => n + 1))}>Testar</Button>
+                    ) : (
+                      <Button disabled={!!unsupported} variant={isOn ? 'default' : 'primary'} onClick={() => toggle(a)}>
+                        {isOn ? 'Desconectar' : 'Conectar'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
-        <Card title="Importação manual (CSV)">
-          <p className="mb-2 text-xs text-slate-400">
-            Colunas: timestamp_utc, componentId, quantity, value, unit (mesmo formato da exportação). Dados importados
-            entram como ESTIMADO/qualidade "suspeita" — nunca como REAL.
-          </p>
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="text-xs"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              const { samples, errors } = parseSamplesCsv(await f.text());
-              const ingest = useApp.getState().ingest;
-              samples.forEach(ingest);
-              const msg = `${samples.length} amostras importadas${errors.length ? `, ${errors.length} erro(s): ${errors.slice(0, 3).join('; ')}` : ''}`;
-              setImportMsg(msg);
-              pushLog('Importação CSV', { at: Date.now(), level: errors.length ? 'warn' : 'info', message: msg });
-            }}
-          />
-          {importMsg && <p className="mt-2 text-xs text-slate-300">{importMsg}</p>}
-        </Card>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <DevicesPanel />
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <TestConsole />
+        <div className="space-y-3">
+          <Card title="Injetar mensagem EMGP (sem hardware)">
+            <p className="mb-2 text-xs text-slate-400">
+              Cole uma ou mais linhas no formato do gateway. Útil para conferir cadastro e mapeamento. Se o dispositivo
+              estiver validado, a leitura entra como REAL — use apenas para testes.
+            </p>
+            <textarea
+              className="input h-24 font-mono text-xs"
+              value={emgp}
+              onChange={(e) => setEmgp(e.target.value)}
+              aria-label="Linhas EMGP"
+            />
+            <div className="mt-2 flex gap-2">
+              <Button onClick={() => manualEmgp.inject(emgp)} data-testid="emgp-inject">
+                Enviar
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setEmgp((t) => {
+                    try {
+                      const o = JSON.parse(t.trim().split('\n').pop()!);
+                      o.seq = (o.seq ?? 0) + 1;
+                      return JSON.stringify(o);
+                    } catch {
+                      return t;
+                    }
+                  })
+                }
+              >
+                seq +1
+              </Button>
+            </div>
+          </Card>
+          <Card title="Ingestão pela internet (HTTPS)">
+            <p className="text-xs text-slate-400">
+              Para gateways com Wi-Fi/4G. Requer a Cloud Function implantada (ver docs/integration-manual).
+            </p>
+            <pre className="mt-2 overflow-auto rounded bg-ink-950 p-2 text-[11px] text-slate-300">{`POST ${INGEST_URL}
+Authorization: Bearer <token do dispositivo>
+Content-Type: application/x-ndjson
+
+{"v":1,"dev":"<id>","seq":1,"ch":{"t1":31.5}}`}</pre>
+          </Card>
+          <Card title="Importação manual (CSV)">
+            <p className="mb-2 text-xs text-slate-400">
+              Colunas: timestamp_utc, componentId, quantity, value, unit. Entram como ESTIMADO/qualidade "suspeita" —
+              nunca como REAL.
+            </p>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="text-xs"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const { samples, errors } = parseSamplesCsv(await f.text());
+                const ingest = useApp.getState().ingest;
+                samples.forEach(ingest);
+                const msg = `${samples.length} amostras importadas${errors.length ? `, ${errors.length} erro(s): ${errors.slice(0, 3).join('; ')}` : ''}`;
+                setImportMsg(msg);
+                pushLog('Importação CSV', { at: Date.now(), level: errors.length ? 'warn' : 'info', message: msg });
+              }}
+            />
+            {importMsg && <p className="mt-2 text-xs text-slate-300">{importMsg}</p>}
+          </Card>
+        </div>
       </div>
 
       <Card title="Log de comunicação">

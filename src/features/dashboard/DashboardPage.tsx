@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../app/store';
-import { useConnectionStatus, useReading, useNow } from '../../app/telemetry';
+import { useConnectionStatus, useReading, useNow, useEffectiveCoverage } from '../../app/telemetry';
 import { useRangeEstimate } from '../../app/vehicleData';
-import { coverageSummary } from '../../domain/coverage';
 import { getComponent } from '../../domain/catalog';
 import type { DisplayValue } from '../../domain/origin';
 import { useCollection } from '../../data/hooks';
@@ -63,7 +62,7 @@ export default function DashboardPage() {
   const odo = useReading('tft-dashboard', 'odometer', 'km');
   const motorT = useReading('hub-motor', 'temperature', '°C');
   const { range, energy } = useRangeEstimate();
-  const cov = coverageSummary();
+  const { summary: cov } = useEffectiveCoverage();
   const now = useNow(5000);
   const { items: maint } = useCollection<MaintenanceRecord>('maintenance');
   const openAlerts = alerts.filter((a) => !a.endedAt && !a.acknowledgedAt);
@@ -158,8 +157,11 @@ export default function DashboardPage() {
               </div>
               <Bar value={cov.measuredPercent} tone="green" />
               <p className="mt-1 text-[11px] text-slate-500">
-                Nenhuma interface da moto foi validada ainda. {cov.counts.estimado} estimados,{' '}
-                {cov.counts.inspecao_manual} por inspeção manual, {cov.counts.nao_coberto} não cobertos.{' '}
+                {cov.counts.medido
+                  ? 'Medição direta via dispositivos externos validados. '
+                  : 'Nenhum dispositivo validado ainda. '}
+                {cov.counts.estimado} estimados, {cov.counts.inspecao_manual} por inspeção manual,{' '}
+                {cov.counts.nao_coberto} não cobertos.{' '}
                 <Link to="/manual" className="text-cyanx-300">
                   Ver matriz
                 </Link>

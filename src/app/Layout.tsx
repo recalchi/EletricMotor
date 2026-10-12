@@ -45,6 +45,7 @@ export function Layout() {
     return all.reduce((m, x) => Math.max(m, x.timestamp), 0);
   });
   const reduced = useApp((s) => s.reducedMotion);
+  const validated = useApp((s) => s.devices.filter((d) => d.status === 'validado').length);
   const openAlerts = useApp((s) => s.alerts.filter((a) => !a.endedAt && !a.acknowledgedAt).length);
   const [open, setOpen] = useState(false);
   const loc = useLocation();
@@ -136,7 +137,10 @@ export function Layout() {
             </span>
           </div>
           <div className="ml-auto text-slate-500">
-            Telemetria REAL: <span className="text-slate-300">nenhuma interface validada</span>
+            Telemetria REAL:{' '}
+            <span className={validated ? 'text-emerald-300' : 'text-slate-300'}>
+              {validated ? `${validated} dispositivo(s) validado(s)` : 'nenhum dispositivo validado'}
+            </span>
           </div>
         </header>
         <main className="min-h-0 flex-1 overflow-auto p-4 print:overflow-visible print:p-0">

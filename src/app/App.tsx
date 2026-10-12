@@ -3,10 +3,10 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './Layout';
 import LoginPage from './LoginPage';
 import { SessionProvider, useSession } from './session';
-import { wireAdapters } from './telemetry';
+import { cloud, wireAdapters } from './telemetry';
 import { useApp } from './store';
-import { useDoc } from '../data/hooks';
-import type { VehicleProfile } from '../domain/types';
+import { useCollection, useDoc } from '../data/hooks';
+import type { DeviceProfile, VehicleProfile } from '../domain/types';
 
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const ExplorerPage = lazy(() => import('../features/vehicle-3d/ExplorerPage'));
@@ -35,6 +35,16 @@ function VehicleLoader() {
   return null;
 }
 
+/** Mantém o cadastro de dispositivos no store (consultado pelos adaptadores) e liga a nuvem ao usuário. */
+function DevicesLoader() {
+  const { items } = useCollection<DeviceProfile>('devices');
+  const setDevices = useApp((s) => s.setDevices);
+  const { session } = useSession();
+  useEffect(() => setDevices(items), [items, setDevices]);
+  useEffect(() => cloud.attach(session?.mode === 'firebase' ? session.uid : null, 'evs-1'), [session]);
+  return null;
+}
+
 function Gate() {
   const { session, loading } = useSession();
   useEffect(wireAdapters, []);
@@ -43,6 +53,7 @@ function Gate() {
   return (
     <>
       <VehicleLoader />
+      <DevicesLoader />
       <Suspense fallback={<div className="p-6 text-slate-400">Carregando…</div>}>
         <Routes>
           <Route element={<Layout />}>

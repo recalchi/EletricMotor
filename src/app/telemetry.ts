@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react';
-import { fromSample, unavailable, type DisplayValue } from '../domain/origin';
+import { CATALOG } from '../domain/catalog';
+import { coverageSummary, effectiveCoverage } from '../domain/coverage';
+import { fromSample, isStale, unavailable, type DisplayValue } from '../domain/origin';
 import type { Quantity } from '../domain/types';
+import { CloudLiveAdapter } from '../integrations/CloudLiveAdapter';
 import { GatewayAdapter } from '../integrations/GatewayAdapter';
+import { BleEssAdapter, BleNusAdapter } from '../integrations/hardware/BleAdapters';
+import { ManualEmgpAdapter, type DeviceStreamAdapter } from '../integrations/hardware/DeviceStreamAdapter';
+import { SerialAdapter } from '../integrations/hardware/SerialAdapter';
 import { SimulatorAdapter } from '../integrations/simulator/SimulatorAdapter';
 import type { TelemetryAdapter } from '../integrations/adapter';
 import { sampleKey, useApp } from './store';
 
+const VEHICLE = 'evs-1';
+/** Cadastro de dispositivos consultado de forma síncrona pelos adaptadores físicos. */
+const resolveDevice = (id: string) => useApp.getState().devices.find((d) => d.id === id);
+
 /** Registro único de adaptadores (singleton da aplicação). */
-export const simulator = new SimulatorAdapter('evs-1');
+export const simulator = new SimulatorAdapter(VEHICLE);
+export const serial = new SerialAdapter(resolveDevice, VEHICLE);
+export const bleNus = new BleNusAdapter(resolveDevice, VEHICLE);
+export const bleEss = new BleEssAdapter(resolveDevice, VEHICLE);
+export const manualEmgp = new ManualEmgpAdapter(resolveDevice, VEHICLE);
+export const cloud = new CloudLiveAdapter();
 export const gateway = new GatewayAdapter();
-export const ADAPTERS: TelemetryAdapter[] = [simulator, gateway];
+export const HARDWARE: DeviceStreamAdapter[] = [serial, bleNus, bleEss, manualEmgp];
+export const ADAPTERS: TelemetryAdapter[] = [simulator, serial, bleNus, bleEss, cloud, manualEmgp, gateway];
 
 let wired = false;
 export function wireAdapters() {
@@ -21,6 +37,7 @@ export function wireAdapters() {
     a.onLog((e) => st.pushLog(a.name, e));
   }
   simulator.onEvent((e) => useApp.getState().pushSimEvent(e));
+  for (const h of HARDWARE) h.onTest((e) => useApp.getState().pushTest(e));
 }
 
 export async function startSimulation() {
@@ -72,4 +89,22 @@ export function useConnectionStatus(): { label: string; tone: 'ok' | 'sim' | 'of
   if (hasReal) return { label: 'Online (REAL)', tone: 'ok' };
   if (simRunning) return { label: 'MODO SIMULAÇÃO', tone: 'sim' };
   return { label: 'Offline — sem fonte conectada', tone: 'off' };
+}
+
+/** Componentes com leitura REAL ainda válida (não desatualizada). */
+export function useRealComponents(): Set<string> {
+  const real = useApp((s) => s.latest.REAL);
+  const now = useNow(5000);
+  return new Set(
+    Object.values(real)
+      .filter((x) => !isStale(x, now))
+      .map((x) => x.componentId),
+  );
+}
+
+/** Cobertura efetiva: o catálogo + componentes que hoje recebem dado REAL de dispositivo validado. */
+export function useEffectiveCoverage() {
+  const realSet = useRealComponents();
+  const items = CATALOG.map((c) => ({ ...c, coverage: effectiveCoverage(c, realSet) }));
+  return { summary: coverageSummary(items), items };
 }

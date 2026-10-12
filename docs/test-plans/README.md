@@ -21,4 +21,7 @@
 9. Relatórios → exportar CSVs; abrir **Relatório técnico** → filtrar período → Gerar PDF (Salvar como PDF).
 9b. Manutenção → anexar foto a um serviço/inspeção → miniatura no histórico e no relatório; excluir remove a foto.
 9c. Relatórios → Trilha de auditoria registra criar/atualizar/excluir com usuário e horário.
+10a. Conectividade → Novo dispositivo (modelo ESP32) → Injetar mensagem EMGP → aparece no Console de teste, sem telemetria.
+10b. Validar (checklist) → injetar com seq+1 → Motor mostra temperatura **REAL**; cabeçalho “1 dispositivo validado”; cobertura 1/36; após 30 s, **DESATUALIZADO**.
+10c. Hardware real: gravar `firmware/esp32-gateway`, conectar USB ou BLE, conferir console e validar.
 10. Login Firebase (após habilitar Auth) → registros persistem no Firestore por usuário.

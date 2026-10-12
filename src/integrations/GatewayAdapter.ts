@@ -5,10 +5,10 @@ import { BaseAdapter } from './adapter';
  * (CAN/UART/BLE/OBD/API) ainda não foi identificada nem validada. Ver docs/integration-manual.
  */
 export class GatewayAdapter extends BaseAdapter {
-  id = 'gateway';
-  name = 'Gateway de leitura (futuro)';
+  id = 'evs-direct';
+  name = 'Interface direta da moto (BMS/controladora)';
   kind = 'gateway' as const;
-  description = 'Somente leitura. Aguardando identificação documentada da interface da moto.';
+  description = 'Leitura do BMS/controladora da EVS. Bloqueada: nenhuma interface documentada e validada.';
 
   constructor() {
     super();
