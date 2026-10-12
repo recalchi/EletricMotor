@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "apk": "powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1",
-    "cap:sync": "cap sync android"
+    "cap:sync": "cap sync android",
+    "scans:pull": "node scripts/pull-scans.mjs",
+    "rules:deploy": "firebase deploy --only firestore:rules"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.2",

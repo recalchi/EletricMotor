@@ -11,7 +11,7 @@
  */
 import { create } from 'zustand';
 
-export const APP_VERSION = '0.6.0';
+export const APP_VERSION = '0.6.1';
 
 // ───────────────────────── Registro de erros
 
@@ -191,6 +191,12 @@ async function flush() {
     // falha de armazenamento não pode derrubar a recepção de dados
     console.warn('captura: falha ao gravar', e);
   }
+}
+
+/** Grava imediatamente o que ainda está no buffer (antes de ler/exportar a sessão). */
+export async function flushCapture() {
+  if (flushTimer) clearTimeout(flushTimer);
+  await flush();
 }
 
 /** Registra um evento na sessão de captura ativa (no-op se o gravador estiver desligado). */

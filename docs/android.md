@@ -46,6 +46,15 @@ Um toque faz, só recebendo dados (nada é enviado à moto):
 5. faz o **inventário USB** (todos os dispositivos, com VID/PID e classe);
 6. mostra as **conclusões** em linguagem simples, com “Monitorar ao vivo” para o que enviou dados.
 
+### Enviar scans para análise (nuvem)
+
+No resultado do scan, **Enviar agora** (ou marque “Enviar automaticamente após cada scan”). Requer login Google/e-mail. Só usa o Firestore, sem Storage:
+
+- `users/{uid}/scans/{scanId}`: resumo, conclusões, ambiente e erros (campo `payload`, JSON);
+- `users/{uid}/scans/{scanId}/chunks/{n}`: gravação do scan em JSONL.
+
+No PC, `npm run scans:pull` baixa os últimos scans para `scans-inbox/` (fora do git), em `report.json` e `capture.jsonl`, para análise. O script usa uma conta de serviço salva em `D:\DevTools\keys\eletricmotorz-admin.json`, também fora do repositório.
+
 ### O que já sabemos do teste na EVS (12/10/2026)
 
 - O painel aparece como **“VOLTZ” em Bluetooth clássico**, com os perfis Chamadas, Áudio e Contatos. É o recurso de música/telefone do painel, não um canal de telemetria.

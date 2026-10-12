@@ -9,6 +9,91 @@ import { Icon } from '../../shared/ui/icons';
 import { Explorer } from '../capture/CapturePage';
 import { EXPLORE_MS, SCAN_MS, STEPS, cancelScan, monitorDevice, runAutoScan, useScan } from './autoScan';
 import { advertClues, advertScore, describeUsb, type Finding } from './classify';
+import { getAutoUpload, setAutoUpload, uploadScanReport } from './cloudReport';
+import { useSession } from '../../app/session';
+
+/** Envio do resultado para a nuvem (Firestore do usuário), para análise posterior. */
+function CloudUpload() {
+  const { session } = useSession();
+  const finishedAt = useScan((s) => s.finishedAt);
+  const [auto, setAuto] = useState(getAutoUpload);
+  const [st, setSt] = useState<{ busy: boolean; msg: string | null; err: boolean; sentFor: number | null }>({
+    busy: false,
+    msg: null,
+    err: false,
+    sentFor: null,
+  });
+  const logged = session?.mode === 'firebase';
+
+  const send = async () => {
+    setSt((x) => ({ ...x, busy: true, msg: 'Enviando…', err: false }));
+    try {
+      const r = await uploadScanReport();
+      setSt({
+        busy: false,
+        err: false,
+        sentFor: finishedAt,
+        msg: `Enviado: scan ${r.scanId} (${r.records} registros em ${r.chunks} parte(s)).`,
+      });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      setSt((x) => ({
+        ...x,
+        busy: false,
+        err: true,
+        msg: /permission|insufficient/i.test(m)
+          ? 'Sem permissão no Firestore — as regras de “scans” ainda não foram publicadas.'
+          : m,
+      }));
+    }
+  };
+
+  // Envio automático ao concluir um scan (se ativado e logado)
+  useEffect(() => {
+    if (auto && logged && finishedAt && st.sentFor !== finishedAt && !st.busy) void send();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishedAt, auto, logged]);
+
+  return (
+    <div className="mt-3 rounded-md border border-ink-700 bg-ink-900/60 p-3">
+      <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
+        <Icon name="download" className="h-4 w-4 rotate-180 text-cyanx-300" /> Enviar para análise
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Envia o resultado e a gravação deste scan para a sua conta na nuvem, para análise e melhoria do app. Inclui
+        nomes e endereços dos dispositivos Bluetooth encontrados.
+      </p>
+      {!logged ? (
+        <p className="mt-2 text-xs text-amber-300">
+          Entre com Google ou e-mail para enviar (o modo demonstração é só local).
+        </p>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <Button
+            variant="primary"
+            disabled={st.busy || !finishedAt}
+            onClick={() => void send()}
+            data-testid="scan-upload"
+          >
+            {st.busy ? 'Enviando…' : st.sentFor === finishedAt ? 'Enviar de novo' : 'Enviar agora'}
+          </Button>
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={(e) => {
+                setAuto(e.target.checked);
+                setAutoUpload(e.target.checked);
+              }}
+            />
+            Enviar automaticamente após cada scan
+          </label>
+        </div>
+      )}
+      {st.msg && <p className={cx('mt-2 text-xs', st.err ? 'text-red-300' : 'text-emerald-300')}>{st.msg}</p>}
+    </div>
+  );
+}
 
 const LEVEL: Record<Finding['level'], string> = {
   ok: 'border-emerald-500/50 bg-emerald-500/10',
@@ -152,6 +237,7 @@ function Findings() {
           <Icon name="download" /> Ver e exportar gravação
         </Link>
       </div>
+      <CloudUpload />
     </Card>
   );
 }
