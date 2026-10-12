@@ -18,5 +18,7 @@
 6. Explorador 3D → vista explodida, ocultar carenagens, transparência, isolar, presets de câmera, modo Sensores (ciano × laranja).
 7. Baterias → editar etiqueta; registrar leitura manual e sessão de carga; recarregar e conferir persistência.
 8. Configurações → informar consumo (Wh/km) → autonomia deixa de ser INDISPONÍVEL.
-9. Relatórios → exportar CSVs.
+9. Relatórios → exportar CSVs; abrir **Relatório técnico** → filtrar período → Gerar PDF (Salvar como PDF).
+9b. Manutenção → anexar foto a um serviço/inspeção → miniatura no histórico e no relatório; excluir remove a foto.
+9c. Relatórios → Trilha de auditoria registra criar/atualizar/excluir com usuário e horário.
 10. Login Firebase (após habilitar Auth) → registros persistem no Firestore por usuário.

@@ -1,5 +1,8 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import type { Photo } from '../domain/types';
+import { db, storage } from './firebase';
+import { blobToDataUrl, resizeImage } from './photos';
 
 /** Coleções persistidas por veículo. Telemetria em alta frequência NÃO é persistida aqui. */
 export type CollectionName =
@@ -19,6 +22,9 @@ export interface Repository {
   remove(name: CollectionName, id: string): Promise<void>;
   getDoc<T>(key: 'vehicle' | 'batteries' | 'settings'): Promise<T | null>;
   setDoc<T extends object>(key: 'vehicle' | 'batteries' | 'settings', value: T): Promise<void>;
+  /** Anexa foto (redimensionada). Modo demo: dataURL pequeno no localStorage; Firebase: Storage. */
+  uploadPhoto(file: File): Promise<Photo>;
+  deletePhoto(photo: Photo): Promise<void>;
 }
 
 // ───────────────────────── Local (modo demonstração)
@@ -82,6 +88,14 @@ export class LocalRepository implements Repository {
   async setDoc<T extends object>(k: string, v: T) {
     this.write(`doc:${k}`, v);
   }
+  async uploadPhoto(file: File): Promise<Photo> {
+    // localStorage é limitado (~5 MB): miniatura agressiva
+    const url = await blobToDataUrl(await resizeImage(file, 640, 0.6));
+    return { path: `local/${newId()}`, url, name: file.name, takenAt: Date.now() };
+  }
+  async deletePhoto() {
+    /* dataURL é removido junto com o registro */
+  }
 }
 
 // ───────────────────────── Firestore
@@ -126,6 +140,17 @@ export class FirestoreRepository implements Repository {
   async setDoc<T extends object>(k: string, v: T) {
     const ref = k === 'vehicle' ? this.vehicleDoc() : doc(this.col('meta'), k);
     await setDoc(ref, { ...stripUndefined(v), updatedAt: serverTimestamp() }, { merge: true });
+  }
+  async uploadPhoto(file: File): Promise<Photo> {
+    if (!storage) throw new Error('Firebase Storage não configurado');
+    const path = `users/${this.uid}/vehicles/${this.vehicleId}/photos/${newId()}.jpg`;
+    const r = storageRef(storage, path);
+    await uploadBytes(r, await resizeImage(file), { contentType: 'image/jpeg' });
+    return { path, url: await getDownloadURL(r), name: file.name, takenAt: Date.now() };
+  }
+  async deletePhoto(photo: Photo) {
+    if (!storage || photo.path.startsWith('local/')) return;
+    await deleteObject(storageRef(storage, photo.path)).catch(() => undefined);
   }
 }
 

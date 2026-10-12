@@ -13,8 +13,7 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 60% -10%, rgba(34, 211, 238, 0.07), transparent 60%),
+  background: radial-gradient(1200px 600px at 60% -10%, rgba(34, 211, 238, 0.07), transparent 60%),
     linear-gradient(#030a14, #030a14);
   font-feature-settings: 'tnum';
 }
@@ -55,4 +54,21 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #1c3a5e;
   border-radius: 4px;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body,
+  #root {
+    height: auto;
+    background: #fff !important;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

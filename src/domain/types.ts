@@ -112,6 +112,24 @@ export interface AlertRule {
   illustrative: boolean;
 }
 
+/** Foto anexada a um registro. `url` é dataURL (modo demo) ou URL do Firebase Storage. */
+export interface Photo {
+  path: string;
+  url: string;
+  name: string;
+  takenAt: number;
+}
+
+export interface AuditEntry {
+  id: string;
+  at: number;
+  action: 'criar' | 'atualizar' | 'excluir';
+  collection: string;
+  docId: string;
+  summary: string;
+  actor: string;
+}
+
 export interface MaintenanceRecord {
   id: string;
   date: string; // ISO yyyy-mm-dd
@@ -122,6 +140,7 @@ export interface MaintenanceRecord {
   parts: string;
   costBRL: number;
   workshop: string;
+  photos?: Photo[];
 }
 
 export interface ManualInspection {
@@ -130,6 +149,7 @@ export interface ManualInspection {
   componentId: string;
   condition: 'ok' | 'atencao' | 'substituir';
   notes: string;
+  photos?: Photo[];
 }
 
 export interface BatteryProfile {

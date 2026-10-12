@@ -39,11 +39,15 @@ users/{uid}/vehicles/{vehicleId}/inspections/{id}
 users/{uid}/vehicles/{vehicleId}/chargingSessions/{id}
 users/{uid}/vehicles/{vehicleId}/batteryReadings/{id}
 users/{uid}/vehicles/{vehicleId}/symptoms/{id}
+users/{uid}/vehicles/{vehicleId}/auditLog/{id}           trilha de auditoria (criar/atualizar/excluir)
 ```
+
+Fotos: Firebase Storage em `users/{uid}/vehicles/{vehicleId}/photos/{id}.jpg` (redimensionadas para ≤1280 px no
+navegador; regras limitam a imagens < 10 MB do próprio usuário). No modo demonstração, miniaturas ≤640 px ficam no
+`localStorage`.
 Regras (`firestore.rules`): somente o dono (uid) lê/escreve; o cliente não pode gravar `origin == 'REAL'`; limite de campos por documento.
 
 ## Próximas fases
 - Cloud Function de ingestão autenticada (dispositivo → normalização → agregados).
 - `telemetryAggregates` com retenção configurável.
-- Upload de fotos (Storage) em manutenção/evidências.
-- Relatório PDF.
+- Fotos também em evidências da matriz técnica.

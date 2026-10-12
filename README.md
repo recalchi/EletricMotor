@@ -42,10 +42,10 @@ O projeto tem um princípio inegociável: **honestidade dos dados**. Toda inform
 - 🔋 **Baterias A/B independentes** — cadastro de etiqueta, comparação, SOC × SOH × capacidade efetiva com metodologia, leituras manuais e sessões de carga.
 - 🧪 **Laboratório** — simulador com 8 cenários (estacionada, carga, urbano, subida, baixa carga com perda de dados, temperatura elevada, falha de BMS, gateway desconectado), play/pause/reset e aceleração do tempo.
 - 🚨 **Diagnóstico** — regras de alerta configuráveis (severidade, início/fim, confirmação, sugestão de inspeção) e registro de sintomas. Sem diagnóstico definitivo sem evidência.
-- 🛠️ **Manutenção** — serviços, peças, custos, inspeções manuais e lembretes por km/data (rotulados como regra operacional).
+- 🛠️ **Manutenção** — serviços, peças, custos, inspeções manuais **com fotos** e lembretes por km/data (rotulados como regra operacional).
 - 📡 **Sensores e Conectividade** — inventário de instrumentação proposta (TPMS, temperatura do hub, vibração, GPS, IMU, umidade, medidor de tomada) com riscos e validações pendentes; contrato `TelemetryAdapter` somente-leitura; importação CSV.
 - 📘 **Manual Técnico** — integração em 9 passos com critérios de segurança, matriz de evidências e matriz de cobertura.
-- 📤 **Relatórios** — exportação CSV com unidades, UTC e origem.
+- 📤 **Relatórios** — **relatório técnico em PDF** (folha A4 com filtro de período e fotos), exportações CSV com unidades, UTC e origem, e **trilha de auditoria** de todas as alterações.
 
 ## Começando
 
@@ -134,18 +134,18 @@ Detalhes em [docs/architecture](docs/architecture/README.md).
 
 | Item | Status |
 |---|---|
-| Aplicação, login, 12 telas, simulador, alertas, manutenção, CSV | ✅ funcional |
+| Aplicação, login, 12 telas, simulador, alertas, manutenção com fotos, PDF, CSV, auditoria | ✅ funcional |
 | Modelo 3D | ⚠️ aproximação geométrica **provisória**, sinalizada na tela — [plano do modelo definitivo](docs/3d-model-acquisition.md) |
 | Especificações da EVS (72 V / 33,6 Ah, 3 kW…) | ⚠️ hipóteses — há conflitos entre referências ([matriz de evidências](docs/vehicle-evidence/evidence-matrix.md)) |
 | Leitura real da moto | ⏳ depende de identificar e validar a interface ([manual de integração](docs/integration-manual/README.md)) |
-| Cloud Function de ingestão, relatório PDF, fotos no Storage | ⏳ próximas fases |
+| Cloud Function de ingestão de telemetria | ⏳ próxima fase |
 
 ## Roadmap
 
 1. ✅ Fundação: projeto, Firebase, autenticação, rotas, design system
 2. ✅ Domínio, dashboard e simulador
 3. ✅ 3D navegável (modelo provisório)
-4. 🟡 Diagnóstico e manutenção — PDF e fotos pendentes
+4. ✅ Diagnóstico e manutenção — relatório PDF, fotos (Storage) e auditoria
 5. 🟡 Conectividade extensível — contrato pronto; integração real após validação do protocolo
 6. ⏳ Validação, revisão de fontes e deploy (Firebase Hosting)
 
