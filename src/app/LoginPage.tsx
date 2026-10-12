@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Field } from '../shared/ui';
+import { isNative } from '../platform/native';
 import { authErrorMessage, useSession } from './session';
 
 export default function LoginPage() {
@@ -65,9 +66,12 @@ export default function LoginPage() {
             <Button variant="primary" className="w-full" disabled={busy} type="submit">
               {mode === 'login' ? 'Entrar' : 'Criar conta'}
             </Button>
-            <Button type="button" className="w-full" disabled={busy} onClick={() => run(s.signInGoogle)}>
-              Entrar com Google
-            </Button>
+            {!isNative() && (
+              // Login Google por popup não funciona dentro do WebView do APK; use e-mail/senha no celular
+              <Button type="button" className="w-full" disabled={busy} onClick={() => run(s.signInGoogle)}>
+                Entrar com Google
+              </Button>
+            )}
             <button
               type="button"
               className="w-full text-xs text-slate-400 hover:text-white"

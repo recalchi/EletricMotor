@@ -25,11 +25,11 @@ técnica, as leituras disponíveis, o histórico de manutenção e os próximos 
 
 O projeto tem um princípio inegociável: **honestidade dos dados**. Toda informação na tela diz de onde veio:
 
-| Origem | Significado |
-|---|---|
-| 🟢 **REAL** | Obtido de interface/sensor comprovadamente conectado |
-| 🔵 **ESTIMADO** | Derivado de fórmula documentada e entradas identificadas |
-| 🟠 **SIMULADO** | Gerado pelo simulador — dado fictício de demonstração |
+| Origem              | Significado                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| 🟢 **REAL**         | Obtido de interface/sensor comprovadamente conectado                        |
+| 🔵 **ESTIMADO**     | Derivado de fórmula documentada e entradas identificadas                    |
+| 🟠 **SIMULADO**     | Gerado pelo simulador — dado fictício de demonstração                       |
 | ⚪ **INDISPONÍVEL** | Não coletado, não validado ou sem sensor — **nunca exibe número inventado** |
 
 > **Componente cadastrado ≠ componente monitorado.** Hoje nenhuma interface eletrônica da EVS foi validada,
@@ -44,6 +44,8 @@ O projeto tem um princípio inegociável: **honestidade dos dados**. Toda inform
 - 🚨 **Diagnóstico** — regras de alerta configuráveis (severidade, início/fim, confirmação, sugestão de inspeção) e registro de sintomas. Sem diagnóstico definitivo sem evidência.
 - 🛠️ **Manutenção** — serviços, peças, custos, inspeções manuais **com fotos** e lembretes por km/data (rotulados como regra operacional).
 - 📡 **Conexão real com sensores externos** — protocolo próprio **EMGP v1** e adaptadores **USB serial**, **Bluetooth (UART/NUS)**, **Bluetooth padrão ESS** e **Internet** (Cloud Function `ingest` com token por dispositivo). Cadastro de dispositivos com mapeamento canal → componente, calibração, **console de teste** e **validação por checklist** — só dispositivos validados geram dados REAIS.
+- 📱 **APK Android** — o mesmo app com Bluetooth LE e **USB serial (OTG) nativos**, exportação pelo compartilhamento do Android. Veja [docs/android.md](docs/android.md).
+- 🎙️ **Captura e diagnóstico** — gravador de sessão com tudo o que é recebido (bytes brutos, linhas, mensagens, rejeições, mapa GATT), **explorador Bluetooth somente leitura** e registro de erros do app, exportáveis para análise e melhorias.
 - 🔧 **Firmware de referência** — ESP32 + DS18B20 (temperatura externa do motor hub) em `firmware/esp32-gateway`.
 - 🧭 **Sensores** — inventário de instrumentação proposta (TPMS, temperatura do hub, vibração, GPS, IMU, umidade, medidor de tomada) com riscos e validações pendentes.
 - 📘 **Manual Técnico** — integração em 9 passos com critérios de segurança, matriz de evidências e matriz de cobertura.
@@ -75,9 +77,9 @@ Depois vá em **Laboratório → Iniciar simulação** para ver o painel ganhar 
 ### Com Firebase (login e dados na nuvem)
 
 1. Copie `.env.example` para `.env.local` e preencha com a configuração **web** do Firebase Console
-   (*Configurações do projeto → Seus apps*). Nunca coloque service account ou chaves administrativas.
+   (_Configurações do projeto → Seus apps_). Nunca coloque service account ou chaves administrativas.
 2. No Firebase Console:
-   - **Authentication → Sign-in method**: habilite *E-mail/senha* e *Google*;
+   - **Authentication → Sign-in method**: habilite _E-mail/senha_ e _Google_;
    - **Firestore Database**: crie o banco;
    - publique as regras: `npx firebase-tools deploy --only firestore:rules,storage`.
 3. Reinicie `npm run dev` e entre com e-mail ou Google.
@@ -86,14 +88,15 @@ Sem `.env.local`, o app funciona normalmente em modo demonstração (dados no `l
 
 ## Scripts
 
-| Comando | Descrição |
-|---|---|
-| `npm run dev` | Servidor de desenvolvimento (Vite) |
-| `npm run build` | Type-check + build de produção em `dist/` |
-| `npm run preview` | Serve o build localmente |
-| `npm test` | Testes unitários (Vitest) |
-| `npm run e2e` | Smoke test ponta a ponta (Playwright — rode `npx playwright install chromium` antes) |
-| `npm run lint` / `npm run format` | ESLint / Prettier |
+| Comando                           | Descrição                                                                                            |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `npm run dev`                     | Servidor de desenvolvimento (Vite)                                                                   |
+| `npm run build`                   | Type-check + build de produção em `dist/`                                                            |
+| `npm run preview`                 | Serve o build localmente                                                                             |
+| `npm test`                        | Testes unitários (Vitest)                                                                            |
+| `npm run e2e`                     | Smoke test ponta a ponta (Playwright — rode `npx playwright install chromium` antes)                 |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                                                                    |
+| `npm run apk`                     | Gera `apk/EletricMotor-debug.apk` (JDK/SDK em `D:\DevTools`, ver [docs/android.md](docs/android.md)) |
 
 ## Arquitetura
 
@@ -138,14 +141,14 @@ Detalhes em [docs/architecture](docs/architecture/README.md).
 
 ## Status e limitações
 
-| Item | Status |
-|---|---|
-| Aplicação, login, 12 telas, simulador, alertas, manutenção com fotos, PDF, CSV, auditoria | ✅ funcional |
-| Modelo 3D | ⚠️ aproximação geométrica **provisória**, sinalizada na tela — [plano do modelo definitivo](docs/3d-model-acquisition.md) |
-| Especificações da EVS (72 V / 33,6 Ah, 3 kW…) | ⚠️ hipóteses — há conflitos entre referências ([matriz de evidências](docs/vehicle-evidence/evidence-matrix.md)) |
-| Leitura real por sensores externos (USB, BLE, HTTPS) | ✅ funcional — [protocolo EMGP](docs/integration-manual/gateway-protocol.md) |
-| Leitura do BMS/controladora da EVS | ⏳ depende de documentação da interface ([manual de integração](docs/integration-manual/README.md)) |
-| Cloud Function de ingestão | ✅ código pronto — implantação exige plano Blaze (ou emulador local) |
+| Item                                                                                      | Status                                                                                                                    |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Aplicação, login, 12 telas, simulador, alertas, manutenção com fotos, PDF, CSV, auditoria | ✅ funcional                                                                                                              |
+| Modelo 3D                                                                                 | ⚠️ aproximação geométrica **provisória**, sinalizada na tela — [plano do modelo definitivo](docs/3d-model-acquisition.md) |
+| Especificações da EVS (72 V / 33,6 Ah, 3 kW…)                                             | ⚠️ hipóteses — há conflitos entre referências ([matriz de evidências](docs/vehicle-evidence/evidence-matrix.md))          |
+| Leitura real por sensores externos (USB, BLE, HTTPS)                                      | ✅ funcional — [protocolo EMGP](docs/integration-manual/gateway-protocol.md)                                              |
+| Leitura do BMS/controladora da EVS                                                        | ⏳ depende de documentação da interface ([manual de integração](docs/integration-manual/README.md))                       |
+| Cloud Function de ingestão                                                                | ✅ código pronto — implantação exige plano Blaze (ou emulador local)                                                      |
 
 ## Roadmap
 
