@@ -1,4 +1,5 @@
 import type { TelemetrySample } from '../domain/types';
+import { capture, reportError } from '../app/diagnostics';
 
 export type AdapterState = 'desconectado' | 'conectando' | 'conectado' | 'erro' | 'nao_implementado';
 
@@ -70,6 +71,8 @@ export abstract class BaseAdapter implements TelemetryAdapter {
   }
   protected log(level: AdapterLogEntry['level'], message: string) {
     const e = { at: Date.now(), level, message };
+    capture({ src: this.id, kind: level === 'error' ? 'erro' : 'evento', data: message });
+    if (level === 'error') reportError(`adaptador:${this.id}`, message, undefined, 'erro');
     this.logHandlers.forEach((h) => h(e));
   }
 }

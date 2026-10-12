@@ -3,6 +3,7 @@ import type { DeviceProfile, TelemetrySample } from '../domain/types';
 import { BleEssAdapter } from './hardware/BleAdapters';
 import { ManualEmgpAdapter, type TestConsoleEntry } from './hardware/DeviceStreamAdapter';
 import { mapMessage } from './mapping';
+import { useDiag } from '../app/diagnostics';
 import { LineBuffer, isPlausible, parseEmgpLine, seqGap, validateEmgp } from './protocol';
 
 const NOW = 1_791_820_000_000;
@@ -149,5 +150,16 @@ describe('BLE Environmental Sensing (formatos GATT padrão)', () => {
     const h = new DataView(new ArrayBuffer(2));
     h.setUint16(0, 5678, true);
     expect(BleEssAdapter.decodeHumidity(h)).toBeCloseTo(56.78);
+  });
+});
+
+describe('captura de mensagens recebidas', () => {
+  it('registra mensagens válidas mesmo de dispositivo não cadastrado', () => {
+    useDiag.setState({ capturing: true, captureSession: 't', captureCount: 0, captureRaw: true });
+    const a = new ManualEmgpAdapter(() => undefined, 'evs-1');
+    a.inject('{"v":1,"dev":"desconhecido","seq":1,"ch":{"x":1}}');
+    // linha + mensagem
+    expect(useDiag.getState().captureCount).toBe(2);
+    useDiag.setState({ capturing: false });
   });
 });

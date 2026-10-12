@@ -1,4 +1,5 @@
 import type { DeviceProfile, DeviceTransport, TelemetrySample } from '../../domain/types';
+import { capture, reportError, toHex } from '../../app/diagnostics';
 import { BaseAdapter } from '../adapter';
 import { mapMessage } from '../mapping';
 import { LineBuffer, parseEmgpLine, seqGap, type EmgpMessage } from '../protocol';
@@ -45,12 +46,28 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
     this.testHandlers.forEach((h) => h(e));
   }
 
+  private decoder = new TextDecoder();
+
+  /** Alimenta bytes brutos do transporte (registrados em hex quando a captura bruta está ativa). */
+  protected feedBytes(bytes: Uint8Array) {
+    capture({ src: this.id, kind: 'bruto', data: toHex(bytes), meta: { n: bytes.length } });
+    this.feedText(this.decoder.decode(bytes, { stream: true }));
+  }
+
   /** Alimenta texto bruto recebido do transporte. */
   protected feedText(chunk: string) {
-    for (const line of this.lines.push(chunk)) this.handleLine(line);
+    for (const line of this.lines.push(chunk)) {
+      try {
+        this.handleLine(line);
+      } catch (e) {
+        // uma mensagem problemática nunca interrompe o fluxo de recepção
+        reportError(`adaptador:${this.id}`, e, { linha: line.slice(0, 200) });
+      }
+    }
   }
 
   protected handleLine(line: string, receivedAt = Date.now()) {
+    capture({ src: this.id, kind: 'linha', data: line });
     if (line.trimStart().startsWith('#')) {
       // comentário/log do firmware — não é telemetria
       this.log('info', line.trim().slice(0, 200));
@@ -58,6 +75,7 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
     }
     const r = parseEmgpLine(line, receivedAt);
     if (!r.ok) {
+      capture({ src: this.id, kind: 'rejeitado', data: line, meta: { motivo: r.error } });
       this.test({ at: receivedAt, transport: this.transport, raw: line.slice(0, 300), error: r.error });
       return;
     }
@@ -76,6 +94,12 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
 
     const device = this.resolveDevice(msg.dev);
     if (!device) {
+      capture({
+        src: this.id,
+        kind: 'mensagem',
+        data: raw,
+        meta: { dev: msg.dev, seq: msg.seq, origem: 'nao-cadastrado', st: msg.st },
+      });
       this.test({
         at: receivedAt,
         transport: this.transport,
@@ -86,6 +110,20 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
       return;
     }
     const m = mapMessage(msg, device, this.vehicleId, receivedAt);
+    capture({
+      src: this.id,
+      kind: 'mensagem',
+      data: raw,
+      meta: {
+        dev: msg.dev,
+        seq: msg.seq,
+        origem: m.origin ?? 'teste',
+        perdidas: gap.lost,
+        naoMapeados: m.unmapped,
+        avisos: m.warnings,
+        st: msg.st,
+      },
+    });
     if (m.origin === 'REAL') {
       m.samples.forEach((s) => this.emit(s));
       if (m.warnings.length || m.unmapped.length)
