@@ -11,7 +11,7 @@ android {
     namespace "com.recalchi.eletricmotor"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.recalchi.eletricmotor"
+        applicationId "com.recalchi.eletricmotorz"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

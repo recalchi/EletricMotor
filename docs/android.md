@@ -15,7 +15,7 @@ Tudo é **somente leitura**: não existe função que envie dados ao dispositivo
 Projeto `eletricmotorz` → **Authentication → Sign-in method**:
 1. Ative **E-mail/senha** e **Google** (sem isso aparece “Método de login não habilitado”).
 2. **Configurações do projeto → Seus apps → Adicionar app → Android**:
-   - Nome do pacote: `com.recalchi.eletricmotor`
+   - Nome do pacote: `com.recalchi.eletricmotorz`
    - Impressões digitais do certificado do autor (chave em `D:\DevTools\keys`):
      - SHA-1: `7D:85:01:81:59:8D:20:EC:9D:63:1C:8D:40:CB:AE:DA:BB:EF:50:DF`
      - SHA-256: `AD:BC:D7:82:7D:05:65:75:D4:C8:7B:0F:34:63:BA:88:FB:63:76:1A:92:6D:47:45:D0:28:D2:5B:79:79:46:A0`

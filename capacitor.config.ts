@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 /** Empacotamento Android (APK) do mesmo app web. */
 const config: CapacitorConfig = {
-  appId: 'com.recalchi.eletricmotor',
+  appId: 'com.recalchi.eletricmotorz',
   appName: 'EletricMotor',
   webDir: 'dist',
   android: {
