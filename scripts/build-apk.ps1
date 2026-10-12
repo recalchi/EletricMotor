@@ -19,7 +19,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Falha no cap sync' }
 
 Set-Location (Join-Path $root 'android')
 .\gradlew.bat assembleDebug
-if ($LASTEXITCODE -ne 0) { throw 'Falha no Gradle' }
+$gradleExit = $LASTEXITCODE
+# Encerra o daemon do Gradle: ele segura vários GB de RAM e derruba o próximo build web por falta de memória
+.\gradlew.bat --stop | Out-Null
+if ($gradleExit -ne 0) { throw 'Falha no Gradle' }
 
 $out = Join-Path $root 'apk'
 New-Item -ItemType Directory -Force $out | Out-Null
