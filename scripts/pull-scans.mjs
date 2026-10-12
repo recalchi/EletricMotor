@@ -29,10 +29,9 @@ const inbox = join(root, 'scans-inbox');
 mkdirSync(inbox, { recursive: true });
 
 const all = [];
-for (const user of await db.collection('users').listDocuments()) {
-  const snap = await user.collection('scans').get();
-  for (const d of snap.docs) all.push({ uid: user.id, ref: d.ref, data: d.data() });
-}
+// Consulta de grupo: acha users/{uid}/scans mesmo quando o documento do usuário não existe
+for (const d of (await db.collectionGroup('scans').get()).docs)
+  all.push({ uid: d.ref.parent.parent?.id, ref: d.ref, data: d.data() });
 all.sort((a, b) => (b.data.createdAt?.toMillis?.() ?? 0) - (a.data.createdAt?.toMillis?.() ?? 0));
 
 const index = [];
