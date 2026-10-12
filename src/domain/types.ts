@@ -55,7 +55,8 @@ export type Quantity =
   | 'pressure'
   | 'vibration'
   | 'cycles'
-  | 'odometer';
+  | 'odometer'
+  | 'humidity';
 
 export interface SignalDefinition {
   quantity: Quantity;
@@ -219,4 +220,39 @@ export interface SensorCandidate {
   pendingValidation: string;
   estimatedCostBRL: string;
   status: 'proposto' | 'em_avaliacao' | 'instalado';
+}
+
+/** Canal de um dispositivo externo mapeado para componente/grandeza do catálogo, com calibração linear. */
+export interface DeviceChannel {
+  channel: string;
+  componentId: string;
+  quantity: Quantity;
+  unit: string;
+  /** valor = bruto × scale + offset */
+  scale: number;
+  offset: number;
+}
+
+export type DeviceTransport = 'serial' | 'ble-nus' | 'ble-ess' | 'https';
+
+/**
+ * Dispositivo de aquisição do proprietário (gateway/sensor externo).
+ * Só produz dados REAIS depois de `status: 'validado'` (passo 6 do manual). Antes disso, as leituras
+ * vão apenas para o console de teste.
+ */
+export interface DeviceProfile {
+  id: string;
+  name: string;
+  transport: DeviceTransport;
+  sensorCandidateId?: string;
+  channels: DeviceChannel[];
+  status: 'teste' | 'validado' | 'desativado';
+  validatedAt?: number;
+  validationNotes?: string;
+  /** SHA-256 (hex) do token de ingestão HTTPS — o token em si nunca é armazenado. */
+  tokenHash?: string;
+  firmware?: string;
+  createdAt: number;
+  /** Prazo após o qual a leitura é exibida como desatualizada. */
+  sampleValidityMs: number;
 }

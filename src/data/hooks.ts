@@ -11,6 +11,7 @@ const COLLECTION_LABEL: Record<CollectionName, string> = {
   symptoms: 'Sintoma',
   alerts: 'Alerta',
   auditLog: 'Auditoria',
+  devices: 'Dispositivo',
 };
 
 function summarize(item: Record<string, unknown> | undefined): string {

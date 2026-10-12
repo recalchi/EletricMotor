@@ -2,10 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../../app/session';
 import { useApp } from '../../app/store';
+import { useEffectiveCoverage } from '../../app/telemetry';
 import { useBatteries, useVehicleSettings } from '../../app/vehicleData';
 import { useCollection } from '../../data/hooks';
 import { CATALOG, getComponent } from '../../domain/catalog';
-import { COVERAGE_LABEL, coverageSummary } from '../../domain/coverage';
+import { COVERAGE_LABEL } from '../../domain/coverage';
 import { nominalEnergyKWh } from '../../domain/estimates';
 import { ORIGIN_DESCRIPTION, ORIGIN_LABEL } from '../../domain/origin';
 import type {
@@ -97,7 +98,7 @@ export default function TechnicalReport() {
   const rd = reads.items
     .filter((r) => inRange(new Date(r.timestamp).toISOString(), from, to))
     .sort((a, b) => a.timestamp - b.timestamp);
-  const cov = coverageSummary();
+  const { summary: cov, items: covItems } = useEffectiveCoverage();
   const pendingSpecs = CATALOG.flatMap((c) =>
     c.specs.filter((s) => s.evidence !== 'documento' && s.evidence !== 'inspecao').map((s) => ({ c, s })),
   );
@@ -332,7 +333,7 @@ export default function TechnicalReport() {
           <T
             head={['Componente', 'Cobertura']}
             empty="—"
-            rows={CATALOG.map((c) => [c.name, COVERAGE_LABEL[c.coverage]])}
+            rows={covItems.map((c) => [c.name, COVERAGE_LABEL[c.coverage]])}
           />
         </Section>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CATALOG, GROUP_LABELS } from '../../domain/catalog';
-import { COVERAGE_LABEL, coverageSummary } from '../../domain/coverage';
+import { COVERAGE_LABEL } from '../../domain/coverage';
+import { useEffectiveCoverage } from '../../app/telemetry';
 import { Card, EvidenceBadge, PageHeader, cx } from '../../shared/ui';
 
 const STEPS: { title: string; body: string[]; safety?: string; done?: string }[] = [
@@ -77,7 +78,7 @@ const STEPS: { title: string; body: string[]; safety?: string; done?: string }[]
 
 export default function ManualPage() {
   const [tab, setTab] = useState<'manual' | 'evidencias' | 'cobertura'>('manual');
-  const cov = coverageSummary();
+  const { summary: cov, items: covItems } = useEffectiveCoverage();
   const specs = CATALOG.flatMap((c) => c.specs.map((s) => ({ c, s })));
 
   return (
@@ -193,7 +194,7 @@ export default function ManualPage() {
               </tr>
             </thead>
             <tbody>
-              {CATALOG.map((c) => (
+              {covItems.map((c) => (
                 <tr key={c.id}>
                   <td>{c.name}</td>
                   <td className="text-xs text-slate-400">{GROUP_LABELS[c.group]}</td>

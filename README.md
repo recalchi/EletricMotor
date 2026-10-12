@@ -43,7 +43,9 @@ O projeto tem um princípio inegociável: **honestidade dos dados**. Toda inform
 - 🧪 **Laboratório** — simulador com 8 cenários (estacionada, carga, urbano, subida, baixa carga com perda de dados, temperatura elevada, falha de BMS, gateway desconectado), play/pause/reset e aceleração do tempo.
 - 🚨 **Diagnóstico** — regras de alerta configuráveis (severidade, início/fim, confirmação, sugestão de inspeção) e registro de sintomas. Sem diagnóstico definitivo sem evidência.
 - 🛠️ **Manutenção** — serviços, peças, custos, inspeções manuais **com fotos** e lembretes por km/data (rotulados como regra operacional).
-- 📡 **Sensores e Conectividade** — inventário de instrumentação proposta (TPMS, temperatura do hub, vibração, GPS, IMU, umidade, medidor de tomada) com riscos e validações pendentes; contrato `TelemetryAdapter` somente-leitura; importação CSV.
+- 📡 **Conexão real com sensores externos** — protocolo próprio **EMGP v1** e adaptadores **USB serial**, **Bluetooth (UART/NUS)**, **Bluetooth padrão ESS** e **Internet** (Cloud Function `ingest` com token por dispositivo). Cadastro de dispositivos com mapeamento canal → componente, calibração, **console de teste** e **validação por checklist** — só dispositivos validados geram dados REAIS.
+- 🔧 **Firmware de referência** — ESP32 + DS18B20 (temperatura externa do motor hub) em `firmware/esp32-gateway`.
+- 🧭 **Sensores** — inventário de instrumentação proposta (TPMS, temperatura do hub, vibração, GPS, IMU, umidade, medidor de tomada) com riscos e validações pendentes.
 - 📘 **Manual Técnico** — integração em 9 passos com critérios de segurança, matriz de evidências e matriz de cobertura.
 - 📤 **Relatórios** — **relatório técnico em PDF** (folha A4 com filtro de período e fotos), exportações CSV com unidades, UTC e origem, e **trilha de auditoria** de todas as alterações.
 
@@ -97,26 +99,30 @@ Sem `.env.local`, o app funciona normalmente em modo demonstração (dados no `l
 
 ```mermaid
 flowchart LR
-  A[Voltz EVS: interfaces a verificar] -.-> B[Gateway somente-leitura]
-  B -.-> C[Adaptador de protocolo validado]
-  S[Simulador identificado] --> D
-  C -.-> D[Normalização + origem + qualidade]
+  A[Voltz EVS: interface interna] -.->|bloqueada| D
+  X[Sensores externos + gateway ESP32] -->|EMGP: USB / BLE| D[Validação EMGP + mapeamento + calibração]
+  X -->|HTTPS + token| I[Cloud Function ingest] --> F
+  D -->|dispositivo em teste| T[Console de teste]
+  D -->|dispositivo validado: REAL| H
+  S[Simulador identificado] --> H
   D --> H[App web + gêmeo 3D]
   D --> G[Regras de alerta]
   M[Registros manuais] --> F[(Firestore)]
   F --> H
 ```
 
-Linhas tracejadas = ainda não implementado, aguardando identificação documentada da interface da moto.
+A interface interna da moto (BMS/controladora) segue bloqueada até haver documentação. A leitura real hoje vem de **sensores externos** do proprietário.
 
 ```
 src/
   domain/         regras puras: catálogo da EVS, origem do dado, estimativas, cobertura, alertas, sensores
-  integrations/   contrato TelemetryAdapter, simulador determinístico, gateway (stub), CSV
+  integrations/   TelemetryAdapter, protocolo EMGP, adaptadores USB/BLE/nuvem, simulador, CSV
   data/           Firebase + repositórios (local para demo, Firestore por usuário)
   app/            sessão, store, rotas, layout
   features/       telas (dashboard, vehicle-3d, batteries, diagnostics, maintenance, …)
   shared/ui/      design system (badges de origem, leituras, cards, gráficos)
+functions/        Cloud Function `ingest` (HTTPS, token por dispositivo, agregação por minuto)
+firmware/         gateway ESP32 de referência (EMGP)
 docs/             arquitetura, matriz de evidências, manual de integração, plano de testes, plano do modelo 3D
 firestore.rules   acesso somente do dono; cliente não pode gravar origem REAL
 ```
@@ -137,8 +143,9 @@ Detalhes em [docs/architecture](docs/architecture/README.md).
 | Aplicação, login, 12 telas, simulador, alertas, manutenção com fotos, PDF, CSV, auditoria | ✅ funcional |
 | Modelo 3D | ⚠️ aproximação geométrica **provisória**, sinalizada na tela — [plano do modelo definitivo](docs/3d-model-acquisition.md) |
 | Especificações da EVS (72 V / 33,6 Ah, 3 kW…) | ⚠️ hipóteses — há conflitos entre referências ([matriz de evidências](docs/vehicle-evidence/evidence-matrix.md)) |
-| Leitura real da moto | ⏳ depende de identificar e validar a interface ([manual de integração](docs/integration-manual/README.md)) |
-| Cloud Function de ingestão de telemetria | ⏳ próxima fase |
+| Leitura real por sensores externos (USB, BLE, HTTPS) | ✅ funcional — [protocolo EMGP](docs/integration-manual/gateway-protocol.md) |
+| Leitura do BMS/controladora da EVS | ⏳ depende de documentação da interface ([manual de integração](docs/integration-manual/README.md)) |
+| Cloud Function de ingestão | ✅ código pronto — implantação exige plano Blaze (ou emulador local) |
 
 ## Roadmap
 
@@ -146,7 +153,7 @@ Detalhes em [docs/architecture](docs/architecture/README.md).
 2. ✅ Domínio, dashboard e simulador
 3. ✅ 3D navegável (modelo provisório)
 4. ✅ Diagnóstico e manutenção — relatório PDF, fotos (Storage) e auditoria
-5. 🟡 Conectividade extensível — contrato pronto; integração real após validação do protocolo
+5. ✅ Conectividade real — sensores externos, EMGP, USB/BLE/HTTPS, validação de dispositivos (interface interna da EVS ainda bloqueada)
 6. ⏳ Validação, revisão de fontes e deploy (Firebase Hosting)
 
 ---
