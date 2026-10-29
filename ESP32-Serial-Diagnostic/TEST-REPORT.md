@@ -1,6 +1,6 @@
 # Relatório de testes — v0.4.0 (29/10/2026)
 
-> A v0.1.0 foi validada no celular real (ver ANALISE-DIAGNOSTICO-1.md): USB, permissão, abertura, configuração e leitura passiva funcionaram, com 0 bytes escritos. A v0.2.0 também rodou no celular real (leitura de volta do chip e detecção de vazão impossível funcionaram; ver ANALISE-DIAGNOSTICO-2.md). A v0.3.0 também rodou no celular real: o teste de RESET manual e o GET_COMM_STATUS funcionaram (ver ANALISE-DIAGNOSTICO-3.md). A v0.4.0 adiciona o filtro de pacote constante e o parser de firmware, **validados só com dados simulados (um log ESP-AT realista derivado do real) — ainda não rodaram no celular**.
+> A v0.1.0 foi validada no celular real (ver ANALISE-DIAGNOSTICO-1.md): USB, permissão, abertura, configuração e leitura passiva funcionaram, com 0 bytes escritos. A v0.2.0 também rodou no celular real (leitura de volta do chip e detecção de vazão impossível funcionaram; ver ANALISE-DIAGNOSTICO-2.md). A v0.3.0 também rodou no celular real: o teste de RESET manual e o GET_COMM_STATUS funcionaram (ver ANALISE-DIAGNOSTICO-3.md). A v0.4.0 (filtro de pacote constante e parser de firmware) **também foi validada no celular real** — ver ANALISE-DIAGNOSTICO-4.md: 84.349 pacotes de ruído filtrados, log limpo de 4.791 B e firmware identificado.
 
 ## Executado e aprovado (automatizado)
 | Verificação | Resultado |
@@ -19,7 +19,7 @@ Cenários simulados (gateway USB falso, relógio simulado): sem dispositivo, sem
 - Observação: o emulador estava lento e mostrou “System UI isn’t responding” na 1ª abertura; é do emulador, não do app.
 
 ## NÃO validado (depende de hardware / não executado)
-- Na v0.3.0: o aviso de RESET e a detecção do banner dentro do fluxo **só foram testados com dados simulados**; o GET_COMM_STATUS (`0x10`) nunca rodou em chip real.
+- Ainda não validado em hardware: reconexão após queda USB, permissão negada/expirada, Wi-Fi opcional, compartilhar/salvar ZIP. A leitura de volta do chip, o aviso de RESET, o filtro e o parser **já foram validados** em hardware.
 - Na v0.2.0: GETs de leitura do CP210x (`0x1D`, `0x04`, `0x08`, part number `0xFF/0x370B`) — implementados, **nunca executados em chip real**; podem retornar "n/d" em algum modelo.
 - Nova varredura até 2 Mbaud (o CP2102 original só vai até 1 Mbaud; rejeições aparecem como aviso).
 - Compartilhamento (`ACTION_SEND`) e “Salvar em pasta” (SAF) — botões existem, mas não foram acionados.
