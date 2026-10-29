@@ -1,6 +1,8 @@
 # Gravar o firmware gateway (EletricMotor) na sua placa — feito no PC
 
-> **Este app nunca grava firmware.** Os passos abaixo são do computador, por sua conta. Não compilei este `.ino` aqui (não há toolchain Arduino configurada), então a 1ª compilação pode pedir ajustes de versão de biblioteca.
+> **Este app nunca grava firmware.** Os passos abaixo são do computador, por sua conta.
+>
+> **Compilação verificada (29/10/2026):** `firmware/esp32-gateway/esp32-gateway.ino` compila sem erros para "ESP32 Dev Module" com **arduino-cli 1.5.2, core esp32 3.3.12, NimBLE-Arduino 2.5.2, OneWire 2.3.8, DallasTemperature 4.0.6**: 673.232 bytes (51% da área de programa), 42.212 bytes de RAM (12%). **Não foi gravado nem testado em placa** — só compilado.
 
 Placa: ESP32 DevKit 38 pinos, ESP-WROOM-32, CP2102, flash 4 MB (confirmado pelo log de boot).
 Hoje ela roda firmware Espressif AT de fábrica (inferência pelo log). **Gravar o gateway substitui o ESP-AT.**
@@ -12,6 +14,13 @@ pip install esptool
 esptool.py --port COM5 --baud 460800 read_flash 0 0x400000 backup_esp32_fabrica.bin
 ```
 (Troque `COM5` pela porta da placa. 0x400000 = 4 MB.)
+
+## 1-alt. Atalho sem Arduino IDE: binário pronto (opcional)
+`dist/esp32-gateway-esp32devmodule-merged.bin` (4 MB, SHA-256 `c4e2ab6fefc69c911dfccddefbee5040db72ba6b7fa67d5e6efb8922aac52a62`), compilado do `.ino` do repositório com `DEVICE_ID "esp32-hub"` e **Wi-Fi/token vazios**. Ele sobrescreve toda a flash (inclui o ESP-AT), por isso faça o backup do passo 0 antes.
+```bash
+esptool.py --port COM5 --baud 460800 write_flash 0x0 esp32-gateway-esp32devmodule-merged.bin
+```
+Depois pule para o passo 3. Se preferir compilar você mesmo, siga o passo 1.
 
 ## 1. Preparar o Arduino IDE 2.x
 1. Placas → instale **esp32 by Espressif Systems 3.x**.
