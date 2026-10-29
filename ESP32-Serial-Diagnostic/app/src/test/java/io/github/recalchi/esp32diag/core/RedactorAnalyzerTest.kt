@@ -70,4 +70,14 @@ class RedactorAnalyzerTest {
         assertTrue(a.distinctBytes in 2..33)
         assertTrue(a.topBytes.contains("×"))
     }
+
+    @Test fun strongSignatureCountsInsideNoiseButWeakOnesDoNot() {
+        val strong = SerialAnalyzer.analyze(115200, NOISE + "..rst:0x1 (POWERON_RESET)..".toByteArray() + NOISE)
+        assertEquals(Kind.GARBLED, strong.kind)
+        assertTrue(strong.strongSignatures.isNotEmpty())
+        assertTrue(strong.signatures.isNotEmpty())
+        val weak = SerialAnalyzer.analyze(115200, NOISE + "xx I ( yy E ( zz".toByteArray() + NOISE)
+        assertTrue(weak.strongSignatures.isEmpty())
+        assertTrue(weak.signatures.isEmpty())
+    }
 }

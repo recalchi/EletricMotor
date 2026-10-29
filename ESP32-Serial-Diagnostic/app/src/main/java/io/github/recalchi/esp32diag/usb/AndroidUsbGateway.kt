@@ -172,7 +172,13 @@ class AndroidUsbGateway(context: Context, private val log: AppLog) : UsbGateway 
             }
             val line = get(0xC1, 0x04, 0, 2)?.let { (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8) }
             val modem = get(0xC1, 0x08, 0, 1)?.let { it[0].toInt() and 0xFF }
-            return ChipReadback(part, baud, line, modem)
+            // GET_COMM_STATUS (0x10, 19 bytes): erros, fila RX/TX do chip.
+            val comm = get(0xC1, 0x10, 0, 19)?.let {
+                fun u32(o: Int) = (it[o].toLong() and 0xFF) or ((it[o + 1].toLong() and 0xFF) shl 8) or
+                    ((it[o + 2].toLong() and 0xFF) shl 16) or ((it[o + 3].toLong() and 0xFF) shl 24)
+                "erros=0x%X filaRX=%d filaTX=%d".format(u32(0), u32(8), u32(12))
+            }
+            return ChipReadback(part, baud, line, modem, comm)
         }
 
         override fun close() {

@@ -109,11 +109,12 @@ class DiagnosticRunnerTest {
         gw.openResults.add { s }
         val r = run()
         assertEquals(Outcome.SERIAL_SILENT, r.outcome)
-        assertEquals(listOf(115200) + DiagConfig().scanBauds, s.configured)
+        assertEquals(listOf(115200) + DiagConfig().scanBauds + listOf(115200), s.configured)
         assertEquals(Confidence.MEDIA, r.confidence)
         assertTrue(r.conclusions.any { it.contains("NÃO prova") })
         assertEquals(0, r.bytesWritten)
-        assertEquals(1 + DiagConfig().scanBauds.size, r.captures.size)
+        assertEquals(2 + DiagConfig().scanBauds.size, r.captures.size)
+        assertTrue("pediu RESET físico", r.resetPrompted)
     }
 
     @Test fun garbledAt115200ButTextAt9600PicksTheWorkingBaud() {
@@ -217,8 +218,9 @@ class DiagnosticRunnerTest {
         assertTrue(r.conclusions.any { it.contains("33 bytes") })
         assertTrue(r.conclusions.any { it.contains("confirmou o baud") })
         assertEquals(0, r.bytesWritten)
-        assertTrue("cada captura encerra cedo", clock.t - start < 20_000)
-        assertEquals(1 + DiagConfig().scanBauds.size, s.configured.size)
+        assertTrue("varredura redundante é interrompida", clock.t - start < 60_000)
+        assertEquals("115200, 74880, 9600 e escuta pós-RESET", 4, s.configured.size)
+        assertEquals(StepStatus.SKIPPED, r.step("scan_skip").status)
     }
 
     @Test fun readbackMismatchIsFlaggedAndExplained() {
@@ -247,5 +249,48 @@ class DiagnosticRunnerTest {
         val r = run()
         assertEquals(Outcome.SERIAL_DATA_OK, r.outcome)
         assertTrue("não precisa gastar os 8 s", r.captures.first().durationMs < 8000)
+    }
+
+    @Test fun bootBannerInsideNoiseAfterResetPromptProvesUartWorks() {
+        gw.permitted = true
+        lateinit var s: FakeSession
+        s = FakeSession(clock, costMs = 1) { _, call ->
+            if (s.configured.size >= 4 && call == 40) BOOT_BANNER else PERIODIC_FLOOD
+        }
+        gw.openResults.add { s }
+        val r = run()
+        assertEquals(Outcome.SERIAL_DATA_OK, r.outcome)
+        assertTrue(r.resetPrompted)
+        assertTrue(r.bannerAtMs >= 0)
+        assertTrue(r.conclusions.any { it.contains("PROVA") })
+        assertTrue(r.step("read_reset_115200").detail.contains("DENTRO DO FLUXO"))
+        assertEquals(0, r.bytesWritten)
+    }
+
+    @Test fun noBannerAfterResetPromptKeepsAnomalyAndSaysSo() {
+        gw.permitted = true
+        gw.openResults.add { FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD } }
+        val states = mutableListOf<DiagState>()
+        val r = DiagnosticRunner(gw, clock, AppLog(), DiagConfig(), object : DiagnosticRunner.Listener {
+            override fun onState(state: DiagState) { states.add(state) }
+            override fun onProgress(percent: Int) {}
+            override fun onStep(step: Step) {}
+        }).run()
+        assertEquals(Outcome.SERIAL_RATE_ANOMALY, r.outcome)
+        assertTrue(states.contains(DiagState.PROMPT_RESET))
+        assertTrue(r.conclusions.any { it.contains("NENHUM banner") })
+        assertEquals(-1L, r.bannerAtMs)
+    }
+
+    @Test fun identicalPacketsAreDeduplicatedAfterHeadButStillCounted() {
+        gw.permitted = true
+        gw.openResults.add { FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD } }
+        val r = run()
+        val c = r.captures.first()
+        assertEquals(4096, c.totalBytes)
+        assertTrue(c.dupChunks > 10)
+        assertTrue(c.receivedBytes > 100_000)
+        assertTrue(c.readSizes.startsWith("4096B"))
+        assertEquals(33, r.analyses.first().period)
     }
 }
