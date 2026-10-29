@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Silicon Labs CP210x (CP2102): 10C4:EA60 = 4292:60000 -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <!-- Outras pontes comuns em placas ESP32: CH340/CH341, FTDI, CP2104 -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <usb-device vendor-id="6790" product-id="21795" />
+    <usb-device vendor-id="1027" product-id="24577" />
+    <usb-device vendor-id="1027" product-id="24597" />
+    <usb-device vendor-id="4292" product-id="60016" />
+</resources>
