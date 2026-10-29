@@ -6,7 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
@@ -16,6 +16,7 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import io.github.recalchi.esp32diag.core.AppLog
+import io.github.recalchi.esp32diag.core.ChipReadback
 import io.github.recalchi.esp32diag.core.PermissionResult
 import io.github.recalchi.esp32diag.core.ProbeStrategy
 import io.github.recalchi.esp32diag.core.SerialSession
@@ -128,10 +129,16 @@ class AndroidUsbGateway(context: Context, private val log: AppLog) : UsbGateway 
             try { connection.close() } catch (_: Exception) {}
             throw UsbOpenException("falha em open(): ${e.message ?: e}", e)
         }
-        return PortSession(port)
+        // Segunda conexão só para GETs de leitura no endpoint 0 (não reivindica interface, não escreve nada).
+        val ro = if (d.vendorId == 0x10C4) try { usb.openDevice(d) } catch (_: Exception) { null } else null
+        return PortSession(port, ro, log)
     }
 
-    private class PortSession(private val port: UsbSerialPort) : SerialSession {
+    private class PortSession(
+        private val port: UsbSerialPort,
+        private val ro: UsbDeviceConnection?,
+        private val log: AppLog
+    ) : SerialSession {
         override fun configure(baud: Int) {
             try {
                 port.setParameters(baud, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
@@ -148,8 +155,29 @@ class AndroidUsbGateway(context: Context, private val log: AppLog) : UsbGateway 
             null
         }
 
+        /** GET de requisições CP210x (IN, só leitura): part number, baud (0x1D), line ctl (0x04), modem (0x08). */
+        override fun chipReadback(): ChipReadback? {
+            val c = ro ?: return null
+            fun get(type: Int, req: Int, value: Int, len: Int): ByteArray? = try {
+                val b = ByteArray(len)
+                if (c.controlTransfer(type, req, value, 0, b, len, 500) == len) b else null
+            } catch (e: Exception) {
+                log.w("readback", "GET 0x%02X falhou".format(req), e)
+                null
+            }
+            val part = (get(0xC0, 0xFF, 0x370B, 1) ?: get(0xC1, 0xFF, 0x370B, 1))?.let { it[0].toInt() and 0xFF }
+            val baud = get(0xC1, 0x1D, 0, 4)?.let {
+                (it[0].toLong() and 0xFF) or ((it[1].toLong() and 0xFF) shl 8) or
+                    ((it[2].toLong() and 0xFF) shl 16) or ((it[3].toLong() and 0xFF) shl 24)
+            }
+            val line = get(0xC1, 0x04, 0, 2)?.let { (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8) }
+            val modem = get(0xC1, 0x08, 0, 1)?.let { it[0].toInt() and 0xFF }
+            return ChipReadback(part, baud, line, modem)
+        }
+
         override fun close() {
             try { port.close() } catch (_: Exception) {}
+            try { ro?.close() } catch (_: Exception) {}
         }
     }
 }

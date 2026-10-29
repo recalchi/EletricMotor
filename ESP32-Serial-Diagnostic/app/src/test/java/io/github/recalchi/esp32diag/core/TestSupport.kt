@@ -19,8 +19,11 @@ val UNKNOWN = CP2102.copy(id = "/dev/bus/usb/001/003", vid = 0x1234, pid = 0x567
 /** Sessão falsa: `script(baud, callIndex)` devolve bytes, null (timeout) ou lança IOException. */
 class FakeSession(
     private val clock: FakeClock,
+    private val costMs: Int? = null,
     private val script: (baud: Int, call: Int) -> ByteArray?
 ) : SerialSession {
+    var readback: ((Int) -> ChipReadback?)? = null
+    override fun chipReadback(): ChipReadback? = readback?.invoke(baud)
     var baud = 0
     var closed = false
     val configured = mutableListOf<Int>()
@@ -30,7 +33,7 @@ class FakeSession(
     override fun configure(baud: Int) { this.baud = baud; configured.add(baud); calls = 0 }
     override fun read(buf: ByteArray, timeoutMs: Int): Int {
         onRead?.invoke()
-        clock.t += timeoutMs
+        clock.t += costMs ?: timeoutMs
         val data = script(baud, calls++) ?: return 0
         System.arraycopy(data, 0, buf, 0, data.size)
         return data.size
@@ -79,6 +82,11 @@ fun runner(gw: UsbGateway, clock: Clock, cfg: DiagConfig = DiagConfig(), log: Ap
 
 val EMGP_LINE = "{\"v\":1,\"dev\":\"esp32-hub\",\"seq\":0,\"ch\":{\"t1\":24.81}}\r\n".toByteArray()
 val BOOT_BANNER = "ets Jul 29 2019 12:21:46\r\n\r\nrst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n".toByteArray()
+val PATTERN33 = ByteArray(33) { (0x60 + (it * 7) % 0x9F).toByte() }
 val NOISE = ByteArray(64) { (0x80 + it).toByte() }
+
+/** Padrão de 33 bytes repetido, como o observado no ZIP real (v0.1.0). */
+val PERIODIC_FLOOD = ByteArray(4096) { PATTERN33[it % 33] }
+
 
 fun ioFail(): Nothing = throw IOException("USB get_status request failed")

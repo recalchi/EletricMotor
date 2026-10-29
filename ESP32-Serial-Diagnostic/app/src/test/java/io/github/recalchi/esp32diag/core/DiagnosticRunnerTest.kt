@@ -10,7 +10,7 @@ class DiagnosticRunnerTest {
     private val clock = FakeClock()
     private val gw = FakeGateway(clock)
 
-    private fun session(script: (Int, Int) -> ByteArray?) = FakeSession(clock, script)
+    private fun session(script: (Int, Int) -> ByteArray?) = FakeSession(clock, script = script)
     private fun run(cfg: DiagConfig = DiagConfig()) = runner(gw, clock, cfg).run()
     private fun DiagReport.step(id: String) = steps.first { it.id == id }
 
@@ -109,11 +109,11 @@ class DiagnosticRunnerTest {
         gw.openResults.add { s }
         val r = run()
         assertEquals(Outcome.SERIAL_SILENT, r.outcome)
-        assertEquals(listOf(115200, 74880, 9600, 57600), s.configured)
+        assertEquals(listOf(115200) + DiagConfig().scanBauds, s.configured)
         assertEquals(Confidence.MEDIA, r.confidence)
         assertTrue(r.conclusions.any { it.contains("NÃO prova") })
         assertEquals(0, r.bytesWritten)
-        assertEquals(4, r.captures.size)
+        assertEquals(1 + DiagConfig().scanBauds.size, r.captures.size)
     }
 
     @Test fun garbledAt115200ButTextAt9600PicksTheWorkingBaud() {
@@ -180,7 +180,7 @@ class DiagnosticRunnerTest {
         gw.permitted = true
         val big = ByteArray(4000) { 'A'.code.toByte() }
         gw.openResults.add { session { _, _ -> big } }
-        val r = run(DiagConfig(maxCaptureBytes = 5000, earlyStopBytes = 100_000))
+        val r = run(DiagConfig(maxCaptureBytes = 5000))
         val cap = r.captures.first()
         assertEquals(5000, cap.totalBytes)
         assertTrue(cap.truncated)
@@ -200,5 +200,52 @@ class DiagnosticRunnerTest {
             states
         )
         assertFalse(states.contains(DiagState.SCANNING_BAUD))
+    }
+
+    // ---- caso real do ZIP v0.1.0: fluxo impossível, igual em todos os bauds
+    @Test fun impossibleThroughputIsDetectedAtEveryBaudAndStopsFast() {
+        gw.permitted = true
+        val s = FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD }
+        s.readback = { baud -> ChipReadback(0x02, baud.toLong(), 0x0800, 0) }
+        gw.openResults.add { s }
+        val start = clock.t
+        val r = run()
+        assertEquals(Outcome.SERIAL_RATE_ANOMALY, r.outcome)
+        assertTrue(r.analyses.all { it.anomalous })
+        assertEquals(33, r.analyses.first().period)
+        assertEquals("CP2102", r.chip)
+        assertTrue(r.conclusions.any { it.contains("33 bytes") })
+        assertTrue(r.conclusions.any { it.contains("confirmou o baud") })
+        assertEquals(0, r.bytesWritten)
+        assertTrue("cada captura encerra cedo", clock.t - start < 20_000)
+        assertEquals(1 + DiagConfig().scanBauds.size, s.configured.size)
+    }
+
+    @Test fun readbackMismatchIsFlaggedAndExplained() {
+        gw.permitted = true
+        val s = FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD }
+        s.readback = { _ -> ChipReadback(0x20, 3_000_000L, 0x0800, 0) }
+        gw.openResults.add { s }
+        val r = run()
+        assertEquals(StepStatus.WARN, r.step("config").status)
+        assertTrue(r.conclusions.any { it.contains("NÃO confirmou") })
+        assertEquals("CP2102N", r.chip)
+    }
+
+    @Test fun moderateGarbageIsNotFlaggedAsImpossibleRate() {
+        gw.permitted = true
+        gw.openResults.add { session { _, _ -> NOISE } }
+        val r = run()
+        assertEquals(Outcome.SERIAL_GARBLED, r.outcome)
+        assertTrue(r.analyses.none { it.anomalous })
+    }
+
+    @Test fun textStopsEarlyOnceEnoughBytesAreLegible() {
+        gw.permitted = true
+        val s = FakeSession(clock, costMs = 100) { _, _ -> EMGP_LINE.copyOf() }
+        gw.openResults.add { s }
+        val r = run()
+        assertEquals(Outcome.SERIAL_DATA_OK, r.outcome)
+        assertTrue("não precisa gastar os 8 s", r.captures.first().durationMs < 8000)
     }
 }
