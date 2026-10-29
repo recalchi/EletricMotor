@@ -136,6 +136,7 @@ class MainActivity : Activity() {
             else -> DiagController.state.label
         }
         setIfChanged(status, label)
+        status.setTextColor(if (DiagController.state == DiagState.PROMPT_RESET && running) Color.parseColor("#C62828") else Color.parseColor("#1B1B1F"))
         window.decorView.keepScreenOn = busy
         if (bar.progress != DiagController.progress) bar.progress = DiagController.progress
         startBtn.text = if (running) "Cancelar" else "Iniciar diagnóstico"

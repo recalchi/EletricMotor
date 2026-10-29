@@ -26,7 +26,10 @@ enum class PermissionResult { GRANTED, DENIED, TIMEOUT }
 class UsbOpenException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
 /** Leitura (GET) de registradores do chip USB-serial; nada é escrito. */
-data class ChipReadback(val partNum: Int?, val baud: Long?, val lineCtl: Int?, val modemStatus: Int?) {
+data class ChipReadback(
+    val partNum: Int?, val baud: Long?, val lineCtl: Int?, val modemStatus: Int?,
+    val commStatus: String? = null
+) {
     val partName: String? get() = when (partNum) {
         0x01 -> "CP2101"; 0x02 -> "CP2102"; 0x03 -> "CP2103"; 0x04 -> "CP2104"; 0x05 -> "CP2105"
         0x06 -> "CP2108"; 0x07 -> "CP2109"; 0x20, 0x21, 0x22 -> "CP2102N"
@@ -34,7 +37,8 @@ data class ChipReadback(val partNum: Int?, val baud: Long?, val lineCtl: Int?, v
         else -> "desconhecido(0x%02X)".format(partNum)
     }
     fun describe(): String = "chip=${partName ?: "n/d"}, baud lido=${baud ?: "n/d"}, " +
-        "linha=${lineCtl?.let { "0x%04X".format(it) } ?: "n/d"}, modem=${modemStatus?.let { "0x%02X".format(it) } ?: "n/d"}"
+        "linha=${lineCtl?.let { "0x%04X".format(it) } ?: "n/d"}, modem=${modemStatus?.let { "0x%02X".format(it) } ?: "n/d"}" +
+        (commStatus?.let { ", $it" } ?: "")
 }
 
 /**
@@ -80,5 +84,9 @@ data class DiagConfig(
     /** Após este tempo, vazão acima do limite físico do baud encerra a captura (evidência suficiente). */
     val anomalyAfterMs: Long = 1500,
     val maxCaptureBytes: Int = 256 * 1024,
-    val maxReconnects: Int = 2
+    val maxReconnects: Int = 2,
+    /** Após esta quantidade de bauds seguidos com fluxo impossível, a varredura restante é redundante. */
+    val stopScanAfterAnomalies: Int = 3,
+    /** Janela de escuta depois de pedir ao usuário que aperte EN/RESET na placa. */
+    val resetListenMs: Long = 20_000
 )

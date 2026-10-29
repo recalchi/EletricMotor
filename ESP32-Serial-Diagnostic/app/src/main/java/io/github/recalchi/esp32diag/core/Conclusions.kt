@@ -21,7 +21,8 @@ object Conclusions {
         driver: String?,
         errorDetail: String?,
         chip: String? = null,
-        readbacks: List<String> = emptyList()
+        readbacks: List<String> = emptyList(),
+        resetPrompted: Boolean = false
     ): Result = when (outcome) {
         Outcome.NO_DEVICE -> Result(
             "O Android não enxergou nenhum dispositivo USB.",
@@ -117,6 +118,8 @@ object Conclusions {
                 if (readbacks.isEmpty()) "Não foi possível ler de volta do chip o baud aplicado."
                 else if (applied) "O chip confirmou o baud pedido, então o excesso de dados vem da linha RX (ruído/sinal rápido), não de baud ignorado."
                 else "A leitura de volta do chip NÃO confirmou o baud pedido: ${readbacks.first()}",
+                if (resetPrompted) "O app pediu para apertar EN/RESET e escutou ${cfg.resetListenMs / 1000}s a ${cfg.baud} baud: NENHUM banner de boot do ESP32 apareceu no fluxo. " +
+                    "Se você apertou o botão, ou o TX do ESP32 não chega ao chip, ou o fluxo do chip encobre a UART." else "O teste de RESET manual não foi executado.",
                 "Causa raiz não determinada: pode ser TX do ESP32 emitindo fluxo rápido contínuo (ex.: protocolo binário de alta velocidade), linha RX flutuando/em curto, ou chip/clone com comportamento atípico."
             )
             Result(
@@ -141,11 +144,16 @@ object Conclusions {
             listOf("Envie o ZIP: o serial.txt traz o hexdump para identificar a velocidade correta.", SEND_HINT)
         )
         Outcome.SERIAL_DATA_OK -> {
-            val best = analyses.filter { it.kind == Kind.TEXT }.maxByOrNull { it.totalBytes }!!
-            val concl = mutableListOf(
-                "Texto legível recebido a ${best.baud} baud: ${best.totalBytes} bytes, ${best.lineCount} linhas.",
-                "A comunicação USB-serial com o ESP32 está funcionando (somente leitura)."
-            )
+            val best = analyses.filter { it.kind == Kind.TEXT }.maxByOrNull { it.totalBytes }
+                ?: analyses.first { it.strongSignatures.isNotEmpty() }
+            val concl = mutableListOf<String>()
+            if (best.kind == Kind.TEXT) {
+                concl += "Texto legível recebido a ${best.baud} baud: ${best.totalBytes} bytes, ${best.lineCount} linhas."
+                concl += "A comunicação USB-serial com o ESP32 está funcionando (somente leitura)."
+            } else {
+                concl += "Assinatura de boot do ESP32 detectada a ${best.baud} baud DENTRO de um fluxo ruidoso."
+                concl += "Isso PROVA que a UART do ESP32 chega ao celular em ${best.baud} baud; o lixo constante é gerado à parte (provável comportamento do chip/cabo quando a linha está ociosa)."
+            }
             if (best.baud != cfg.baud) concl += "Atenção: a velocidade que funcionou NÃO é a padrão (${cfg.baud})."
             best.signatures.forEach { concl += "Detectado: $it." }
             Result(

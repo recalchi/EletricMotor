@@ -15,10 +15,17 @@ data class Analysis(
     val topBytes: String = "",
     val rateBps: Long = 0,
     val physicalMaxBps: Long = 0,
-    val anomalous: Boolean = false
+    val anomalous: Boolean = false,
+    val strongSignatures: List<String> = emptyList()
 )
 
 object SerialAnalyzer {
+    /** Assinaturas fortes: improváveis de surgirem por acaso em ruído, valem mesmo em fluxo ilegível. */
+    val STRONG_KEYS = listOf(
+        "rst:0x", "ESP-ROM:", "ets Jul", "boot:0x", "waiting for download",
+        "Brownout detector", "Guru Meditation", "invalid header", "flash read err", "{\"v\":1"
+    )
+
     private val signatureTable = listOf(
         "rst:0x" to "Banner de boot do ROM do ESP32 (reset detectado na saída)",
         "ESP-ROM:" to "Banner de boot do ROM do ESP32",
@@ -43,7 +50,8 @@ object SerialAnalyzer {
         }
         val ratio = printable.toDouble() / bytes.size
         val text = String(bytes, Charsets.ISO_8859_1)
-        val sigs = signatureTable.filter { text.contains(it.first) }.map { it.second }.distinct()
+        val allSigs = signatureTable.filter { text.contains(it.first) }
+        val strongSigs = allSigs.filter { it.first in STRONG_KEYS }.map { it.second }.distinct()
         val kind = when {
             bytes.size < 8 -> Kind.TOO_FEW
             ratio >= 0.85 -> Kind.TEXT
@@ -58,12 +66,13 @@ object SerialAnalyzer {
                 }
             }.joinToString("")
         )
+        val sigs = if (kind == Kind.TEXT) allSigs.map { it.second }.distinct() else strongSigs
         val hist = IntArray(256)
         bytes.forEach { hist[it.toInt() and 0xFF]++ }
         val top = hist.withIndex().filter { it.value > 0 }.sortedByDescending { it.value }.take(5)
             .joinToString(" ") { "%02X×%d".format(it.index, it.value) }
         return Analysis(baud, bytes.size, ratio, lines, kind, sigs, preview,
-            period = period(bytes), distinctBytes = hist.count { it > 0 }, topBytes = top)
+            period = period(bytes), distinctBytes = hist.count { it > 0 }, topBytes = top, strongSignatures = strongSigs)
     }
 
     /** Menor período p (1..256) em que ≥95% dos bytes repetem p posições depois; null se não há. */

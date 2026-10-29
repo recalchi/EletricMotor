@@ -91,6 +91,9 @@ object ReportBuilder {
                 put("repeatPeriodBytes", a.period ?: JSONObject.NULL)
                 put("distinctByteValues", a.distinctBytes)
                 put("topBytes", a.topBytes)
+                put("readSizes", r.captures.getOrNull(i)?.readSizes ?: "")
+                put("duplicatePacketsSkipped", r.captures.getOrNull(i)?.dupChunks ?: 0)
+                put("strongSignatures", JSONArray(a.strongSignatures))
             })
         }
         return JSONObject().apply {
@@ -110,6 +113,8 @@ object ReportBuilder {
             put("controlLinesReadOnly", r.controlLines ?: JSONObject.NULL)
             put("chip", r.chip ?: JSONObject.NULL)
             put("chipReadbacks", JSONArray(r.readbacks))
+            put("resetPromptedToUser", r.resetPrompted)
+            put("bootBannerAtMs", if (r.bannerAtMs >= 0) r.bannerAtMs else JSONObject.NULL)
             put("reconnects", r.reconnects)
             put("bytesWrittenToDevice", r.bytesWritten)
             put("wifiModuleIncluded", wifiIncluded)
@@ -185,7 +190,7 @@ object ReportBuilder {
         sb.append("# Senhas/tokens/e-mails/MAC/IP públicos são redigidos no texto; o hexdump abaixo é dos bytes originais (primeiros $HEXDUMP_BYTES).\n\n")
         if (caps.isEmpty()) sb.append("(nenhuma captura: a porta serial não chegou a ser lida)\n")
         for (c in caps) {
-            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes guardados / ${c.receivedBytes} recebidos em ${c.reads} leituras | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
+            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes guardados / ${c.receivedBytes} recebidos em ${c.reads} leituras (tamanhos: ${c.readSizes}; ${c.dupChunks} pacotes idênticos omitidos) | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
             if (c.anomalous) sb.append(" | VAZÃO ACIMA DO LIMITE FÍSICO")
             if (c.truncated) sb.append(" | TRUNCADO")
             sb.append(" ===\n")

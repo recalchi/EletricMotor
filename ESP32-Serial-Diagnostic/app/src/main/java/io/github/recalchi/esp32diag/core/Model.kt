@@ -10,6 +10,7 @@ enum class DiagState(val label: String) {
     CONFIGURING("Configurando porta (115200 8N1)…"),
     READING("Escutando a saída serial…"),
     SCANNING_BAUD("Testando outras velocidades (somente leitura)…"),
+    PROMPT_RESET("APERTE E SOLTE o botão EN/RESET da placa AGORA (o app não reseta)"),
     FINISHED("Concluído"),
     CANCELLED("Cancelado"),
     ERROR("Erro")
@@ -70,7 +71,9 @@ class SerialCapture(
     val truncated: Boolean,
     val receivedBytes: Long = totalBytes.toLong(),
     val reads: Int = 0,
-    val anomalous: Boolean = false
+    val anomalous: Boolean = false,
+    val dupChunks: Int = 0,
+    val readSizes: String = ""
 ) {
     fun allBytes(): ByteArray {
         val out = java.io.ByteArrayOutputStream()
@@ -112,5 +115,7 @@ class DiagReport(
     val analyses: List<Analysis>,
     val chip: String? = null,
     val readbacks: List<String> = emptyList(),
+    val resetPrompted: Boolean = false,
+    val bannerAtMs: Long = -1,
     val bytesWritten: Int = 0
 )

@@ -51,7 +51,13 @@ class DiagnosticRunner(
         var errorDetail: String? = null
         var currentBaud = 0
         var chip: String? = null
+        var resetPrompted = false
+        var bannerAtMs = -1L
         val readbacks = ArrayList<String>()
+    }
+
+    private companion object {
+        const val HEAD_RAW_BYTES = 4096
     }
 
     @Volatile private var cancelled = false
@@ -224,14 +230,20 @@ class DiagnosticRunner(
         capture(ctx, cfg.baud, cfg.readWindowMs, 30, 60)
         var best = ctx.analyses.last()
 
-        // 7) Varredura passiva de outros bauds se não houve texto legível
-        if (best.kind != Kind.TEXT) {
+        // 7) Varredura passiva de outros bauds se não houve texto legível (para cedo se o fluxo impossível se repete)
+        if (best.kind != Kind.TEXT && best.strongSignatures.isEmpty()) {
             state(DiagState.SCANNING_BAUD)
             val n = cfg.scanBauds.size
+            var consecutiveAnomalies = if (best.anomalous) 1 else 0
             for ((i, baud) in cfg.scanBauds.withIndex()) {
                 checkCancel()
-                val p0 = 60 + 35 * i / n
-                val p1 = 60 + 35 * (i + 1) / n
+                if (consecutiveAnomalies >= cfg.stopScanAfterAnomalies) {
+                    record(ctx, "scan_skip", "Varredura restante", StepStatus.SKIPPED,
+                        "Fluxo impossível idêntico em $consecutiveAnomalies velocidades seguidas; testar mais velocidades seria redundante.", clock.now())
+                    break
+                }
+                val p0 = 60 + 25 * i / n
+                val p1 = 60 + 25 * (i + 1) / n
                 t = clock.now()
                 try {
                     session!!.configure(baud)
@@ -241,13 +253,32 @@ class DiagnosticRunner(
                 }
                 readback(ctx, baud)
                 capture(ctx, baud, cfg.scanWindowMs, p0, p1)
-                if (ctx.analyses.last().kind == Kind.TEXT) break
+                val a = ctx.analyses.last()
+                if (a.kind == Kind.TEXT || a.strongSignatures.isNotEmpty()) break
+                consecutiveAnomalies = if (a.anomalous) consecutiveAnomalies + 1 else 0
+            }
+        }
+
+        // 8) Sem texto/assinatura: pede ao usuário que aperte EN/RESET FÍSICO (o app nunca reseta) e escuta.
+        if (ctx.analyses.none { it.kind == Kind.TEXT || it.strongSignatures.isNotEmpty() }) {
+            state(DiagState.PROMPT_RESET)
+            ctx.resetPrompted = true
+            t = clock.now()
+            try {
+                session!!.configure(cfg.baud)
+                readback(ctx, cfg.baud)
+                capture(ctx, cfg.baud, cfg.resetListenMs, 85, 99, stopOnAnomaly = false,
+                    id = "read_reset_${cfg.baud}", untilBanner = true)
+            } catch (e: IOException) {
+                if (cancelled) throw CancelledException()
+                record(ctx, "read_reset_${cfg.baud}", "Escuta após aviso de RESET", StepStatus.WARN, "Falhou: ${e.message ?: e}", t)
             }
         }
 
         val text = ctx.analyses.filter { it.kind == Kind.TEXT }.maxByOrNull { it.totalBytes }
+        val strong = ctx.analyses.firstOrNull { it.strongSignatures.isNotEmpty() }
         ctx.outcome = when {
-            text != null -> Outcome.SERIAL_DATA_OK
+            text != null || strong != null -> Outcome.SERIAL_DATA_OK
             ctx.analyses.any { it.anomalous } -> Outcome.SERIAL_RATE_ANOMALY
             ctx.analyses.any { it.totalBytes > 0 } -> Outcome.SERIAL_GARBLED
             else -> Outcome.SERIAL_SILENT
@@ -271,15 +302,23 @@ class DiagnosticRunner(
         return rb
     }
 
-    private fun capture(ctx: Ctx, baud: Int, windowMs: Long, p0: Int, p1: Int) {
+    private fun capture(
+        ctx: Ctx, baud: Int, windowMs: Long, p0: Int, p1: Int,
+        stopOnAnomaly: Boolean = true, id: String = "read_$baud", untilBanner: Boolean = false
+    ) {
         ctx.currentBaud = baud
         val chunks = ArrayList<SerialChunk>()
         var total = 0
         var received = 0L
         var reads = 0
+        var dups = 0
         var truncated = false
         var anomalous = false
         var lastTextCheck = 0L
+        var last: ByteArray? = null
+        var bannerAt = -1L
+        val recent = StringBuilder()
+        val sizes = HashMap<Int, Int>()
         val start = clock.now()
         val buf = ByteArray(4096)
         try {
@@ -288,17 +327,35 @@ class DiagnosticRunner(
                 val elapsed = clock.now() - start
                 if (elapsed >= windowMs) break
                 progress(p0 + ((p1 - p0) * elapsed / windowMs).toInt())
+                java.util.Arrays.fill(buf, 0)   // descarta a hipótese de "buffer velho" sendo relido
                 try {
                     val n = session!!.read(buf, 250)
                     if (n > 0) {
                         reads++
                         received += n
-                        val keep = minOf(n, cfg.maxCaptureBytes - total)
-                        if (keep > 0) {
-                            chunks.add(SerialChunk(clock.now() - start, buf.copyOf(keep)))
-                            total += keep
+                        sizes.merge(n, 1, Int::plus)
+                        val chunk = buf.copyOf(n)
+                        // Após os primeiros 4 KB, pacotes idênticos ao anterior são só contados (evita inundar o relatório).
+                        val dup = last != null && chunk.contentEquals(last) && total >= HEAD_RAW_BYTES
+                        last = chunk
+                        if (dup) {
+                            dups++
+                        } else {
+                            val keep = minOf(n, cfg.maxCaptureBytes - total)
+                            if (keep > 0) {
+                                chunks.add(SerialChunk(clock.now() - start, if (keep == n) chunk else chunk.copyOf(keep)))
+                                total += keep
+                            }
+                            if (keep < n) truncated = true
+                            if (untilBanner) {
+                                recent.append(String(chunk, Charsets.ISO_8859_1))
+                                if (recent.length > 1024) recent.delete(0, recent.length - 1024)
+                                if (bannerAt < 0 && SerialAnalyzer.STRONG_KEYS.any { recent.contains(it) }) {
+                                    bannerAt = clock.now() - start
+                                    ctx.bannerAtMs = bannerAt
+                                }
+                            }
                         }
-                        if (keep < n) truncated = true
                     }
                 } catch (e: IOException) {
                     if (cancelled) throw CancelledException()
@@ -306,20 +363,22 @@ class DiagnosticRunner(
                     if (!recover(ctx, baud)) throw DisconnectedException()
                 }
                 val now = clock.now() - start
-                // Vazão acima do limite físico (+ folga do buffer do chip) = evidência suficiente: encerra.
+                if (bannerAt >= 0 && now - bannerAt >= 1500) break
+                // Vazão acima do limite físico (+ folga do buffer do chip).
                 if (now >= cfg.anomalyAfterMs && received > 4 * (physicalMaxBps(baud) * now / 1000 + 1024)) {
                     anomalous = true
-                    break
+                    if (stopOnAnomaly) break
                 }
                 // Parada antecipada apenas quando já há texto legível.
-                if (now >= 1000 && now - lastTextCheck >= 500 && total >= cfg.earlyTextBytes) {
+                if (!untilBanner && now >= 1000 && now - lastTextCheck >= 500 && total >= cfg.earlyTextBytes) {
                     lastTextCheck = now
                     if (SerialAnalyzer.analyze(baud, joinChunks(chunks)).kind == Kind.TEXT) break
                 }
             }
         } finally {
             val dur = clock.now() - start
-            val cap = SerialCapture(baud, start, dur, chunks, total, truncated, received, reads, anomalous)
+            val sizesText = sizes.entries.sortedByDescending { it.value }.take(3).joinToString(" ") { "${it.key}B×${it.value}" }
+            val cap = SerialCapture(baud, start, dur, chunks, total, truncated, received, reads, anomalous, dups, sizesText)
             val a0 = SerialAnalyzer.analyze(baud, cap.allBytes())
             val a = a0.copy(
                 rateBps = if (dur > 0) received * 1000 / dur else 0,
@@ -328,9 +387,12 @@ class DiagnosticRunner(
             )
             ctx.captures.add(cap)
             ctx.analyses.add(a)
-            val status = if (a.kind == Kind.TEXT) StepStatus.OK else StepStatus.WARN
-            val rate = "$received B em $dur ms (${a.rateBps} B/s; máximo físico a $baud baud ≈ ${a.physicalMaxBps} B/s)"
+            val inNoise = a.kind != Kind.TEXT && a.strongSignatures.isNotEmpty()
+            val status = if (a.kind == Kind.TEXT || inNoise) StepStatus.OK else StepStatus.WARN
+            val rate = "$received B em $dur ms (${a.rateBps} B/s; máximo físico a $baud baud ≈ ${a.physicalMaxBps} B/s; tamanhos de leitura: $sizesText)"
             val detail = when {
+                inNoise -> "ASSINATURA DO ESP32 DENTRO DO FLUXO: " + a.strongSignatures.joinToString("; ") +
+                    (bannerAt.let { if (it >= 0) " (em +${it} ms)" else "" }) + ". $rate."
                 anomalous -> "FLUXO IMPOSSÍVEL: $rate." + (a.period?.let { " Padrão repetido a cada $it bytes." } ?: "")
                 a.kind == Kind.EMPTY -> "Nenhum byte recebido em ${dur / 1000.0}s."
                 a.kind == Kind.TOO_FEW -> "Apenas ${a.totalBytes} byte(s): insuficiente para avaliar."
@@ -339,11 +401,14 @@ class DiagnosticRunner(
                 else -> "${a.totalBytes} bytes de texto legível (${a.lineCount} linhas)." +
                     if (a.signatures.isNotEmpty()) " Detectado: " + a.signatures.joinToString("; ") else ""
             }
-            record(ctx, "read_$baud", "Leitura passiva a $baud baud", status, detail, start,
+            val title = if (id.startsWith("read_reset")) "Escuta após aviso de RESET ($baud baud)" else "Leitura passiva a $baud baud"
+            record(ctx, id, title, status, detail, start,
                 mapOf("bytes" to a.totalBytes.toString(), "received" to received.toString(), "kind" to a.kind.name,
                     "rateBps" to a.rateBps.toString(), "physicalMaxBps" to a.physicalMaxBps.toString(),
                     "anomalous" to anomalous.toString(), "period" to (a.period?.toString() ?: ""),
-                    "distinct" to a.distinctBytes.toString(), "top" to a.topBytes))
+                    "distinct" to a.distinctBytes.toString(), "top" to a.topBytes,
+                    "readSizes" to sizesText, "dupChunks" to dups.toString(),
+                    "strongSignatures" to a.strongSignatures.joinToString("; ")))
         }
     }
 
@@ -444,7 +509,7 @@ class DiagnosticRunner(
     // ---------------------------------------------------------------- conclusões
 
     private fun buildReport(ctx: Ctx, started: Long): DiagReport {
-        val c = Conclusions.build(ctx.outcome, ctx.devices, ctx.analyses, cfg, ctx.driver, ctx.errorDetail, ctx.chip, ctx.readbacks)
+        val c = Conclusions.build(ctx.outcome, ctx.devices, ctx.analyses, cfg, ctx.driver, ctx.errorDetail, ctx.chip, ctx.readbacks, ctx.resetPrompted)
         return DiagReport(
             startedAtMs = started,
             finishedAtMs = clock.now(),
@@ -463,7 +528,9 @@ class DiagnosticRunner(
             captures = ctx.captures.toList(),
             analyses = ctx.analyses.toList(),
             chip = ctx.chip,
-            readbacks = ctx.readbacks.toList()
+            readbacks = ctx.readbacks.toList(),
+            resetPrompted = ctx.resetPrompted,
+            bannerAtMs = ctx.bannerAtMs
         )
     }
 }
