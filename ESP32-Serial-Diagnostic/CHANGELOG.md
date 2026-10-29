@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 29/10/2026 (pós-diagnóstico nº 3)
+Base: [ANALISE-DIAGNOSTICO-3.md](ANALISE-DIAGNOSTICO-3.md) — o teste de RESET provou que a UART do ESP32 chega ao celular e revelou um log de boot de firmware ESP-AT.
+- **Filtro de pacote constante:** quando um mesmo pacote domina as leituras (≥ 80% após 50 leituras) ele é tratado como ruído do chip/pilha USB, removido retroativamente e contado. O log restante fica **limpo** e é analisado como texto de verdade. O perfil (período, bytes mais frequentes) continua vindo do bruto inicial.
+- **Identificação do firmware pelo log de boot** (`FirmwareParser`): motivo do reset, modo de boot, flash (tamanho/modo/velocidade), versão do ESP-IDF, revisão do chip, partições, `module_name` e indícios de **ESP-AT**; vai para as conclusões e para `summary.json` (`firmware`).
+- **Próximos passos específicos para ESP-AT:** gravar o firmware gateway do EletricMotor pelo PC (o app nunca grava) ou usar adaptador serial separado em GPIO16/17 para comandos AT.
+- Escuta pós-RESET de 20 s → 30 s e 5 s extras depois do banner (pega o restante do boot).
+- Testes: 42 → 46 (inclui recuperação byte a byte de um log ESP-AT realista misturado ao ruído de 33 B).
+
 ## 0.3.0 — 29/10/2026 (pós-diagnóstico nº 2)
 Base: [ANALISE-DIAGNOSTICO-2.md](ANALISE-DIAGNOSTICO-2.md).
 - **Teste de RESET manual:** se não houver texto/assinatura, o app mostra em vermelho "APERTE E SOLTE o botão EN/RESET da placa AGORA" e escuta 20 s a 115200, procurando o banner de boot **dentro** do fluxo ruidoso. O app continua sem resetar nada; só o usuário aperta o botão.

@@ -72,8 +72,12 @@ class SerialCapture(
     val receivedBytes: Long = totalBytes.toLong(),
     val reads: Int = 0,
     val anomalous: Boolean = false,
+    /** Pacotes constantes (ruído) filtrados. */
     val dupChunks: Int = 0,
-    val readSizes: String = ""
+    val readSizes: String = "",
+    /** Primeiros bytes brutos recebidos (inclui ruído), para perfil/periodicidade. */
+    val headRaw: ByteArray = ByteArray(0),
+    val junkPacketSize: Int = 0
 ) {
     fun allBytes(): ByteArray {
         val out = java.io.ByteArrayOutputStream()
@@ -117,5 +121,6 @@ class DiagReport(
     val readbacks: List<String> = emptyList(),
     val resetPrompted: Boolean = false,
     val bannerAtMs: Long = -1,
+    val firmware: FirmwareInfo? = null,
     val bytesWritten: Int = 0
 )

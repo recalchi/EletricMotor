@@ -179,8 +179,7 @@ class DiagnosticRunnerTest {
 
     @Test fun captureIsBoundedBySize() {
         gw.permitted = true
-        val big = ByteArray(4000) { 'A'.code.toByte() }
-        gw.openResults.add { session { _, _ -> big } }
+        gw.openResults.add { session { _, call -> ByteArray(4000) { ((call + it) % 90 + 32).toByte() } } }
         val r = run(DiagConfig(maxCaptureBytes = 5000))
         val cap = r.captures.first()
         assertEquals(5000, cap.totalBytes)
@@ -262,8 +261,8 @@ class DiagnosticRunnerTest {
         assertEquals(Outcome.SERIAL_DATA_OK, r.outcome)
         assertTrue(r.resetPrompted)
         assertTrue(r.bannerAtMs >= 0)
-        assertTrue(r.conclusions.any { it.contains("PROVA") })
-        assertTrue(r.step("read_reset_115200").detail.contains("DENTRO DO FLUXO"))
+        assertTrue(r.conclusions.any { it.contains("filtrou") })
+        assertTrue(r.step("read_reset_115200").detail.contains("Texto legível"))
         assertEquals(0, r.bytesWritten)
     }
 
@@ -282,15 +281,40 @@ class DiagnosticRunnerTest {
         assertEquals(-1L, r.bannerAtMs)
     }
 
-    @Test fun identicalPacketsAreDeduplicatedAfterHeadButStillCounted() {
+    @Test fun constantNoisePacketsAreFilteredButStillCounted() {
         gw.permitted = true
         gw.openResults.add { FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD } }
         val r = run()
         val c = r.captures.first()
-        assertEquals(4096, c.totalBytes)
-        assertTrue(c.dupChunks > 10)
+        assertEquals("ruído filtrado, nada de dado real", 0, c.totalBytes)
+        assertTrue(c.dupChunks > 50)
+        assertEquals(4096, c.junkPacketSize)
         assertTrue(c.receivedBytes > 100_000)
         assertTrue(c.readSizes.startsWith("4096B"))
         assertEquals(33, r.analyses.first().period)
+    }
+
+    @Test fun realisticEspAtBootLogIsRecoveredFromNoiseAndIdentified() {
+        gw.permitted = true
+        lateinit var s: FakeSession
+        s = FakeSession(clock, costMs = 1) { _, call ->
+            val i = call - 60
+            if (s.configured.size >= 4 && i in AT_BOOT_PACKETS.indices) AT_BOOT_PACKETS[i] else PATTERN33
+        }
+        gw.openResults.add { s }
+        val r = run()
+        assertEquals(Outcome.SERIAL_DATA_OK, r.outcome)
+        val recovered = String(r.captures.last().allBytes(), Charsets.ISO_8859_1)
+        assertEquals("log limpo, sem ruído", AT_BOOT_LOG, recovered)
+        val f = r.firmware!!
+        assertTrue(f.espAt)
+        assertEquals("4MB", f.flashSize)
+        assertEquals("qa-test-v4.3.3-20220423", f.idfVersion)
+        assertEquals("3", f.chipRevision)
+        assertEquals("WROOM-32", f.moduleName)
+        assertTrue(f.partitions.containsAll(listOf("phy_init", "otadata", "nvs", "at_customize", "ota_0", "ota_1")))
+        assertTrue(r.conclusions.any { it.contains("Espressif AT") })
+        assertTrue(r.nextSteps.any { it.contains("NUNCA grava firmware") })
+        assertEquals(0, r.bytesWritten)
     }
 }

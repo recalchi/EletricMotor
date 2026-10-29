@@ -88,5 +88,7 @@ data class DiagConfig(
     /** Após esta quantidade de bauds seguidos com fluxo impossível, a varredura restante é redundante. */
     val stopScanAfterAnomalies: Int = 3,
     /** Janela de escuta depois de pedir ao usuário que aperte EN/RESET na placa. */
-    val resetListenMs: Long = 20_000
+    val resetListenMs: Long = 30_000,
+    /** Continua escutando após o banner, para pegar o restante do boot. */
+    val afterBannerMs: Long = 5_000
 )

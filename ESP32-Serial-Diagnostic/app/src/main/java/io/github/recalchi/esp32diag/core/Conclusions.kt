@@ -22,7 +22,9 @@ object Conclusions {
         errorDetail: String?,
         chip: String? = null,
         readbacks: List<String> = emptyList(),
-        resetPrompted: Boolean = false
+        resetPrompted: Boolean = false,
+        firmware: FirmwareInfo? = null,
+        junkNote: String? = null
     ): Result = when (outcome) {
         Outcome.NO_DEVICE -> Result(
             "O Android não enxergou nenhum dispositivo USB.",
@@ -156,11 +158,25 @@ object Conclusions {
             }
             if (best.baud != cfg.baud) concl += "Atenção: a velocidade que funcionou NÃO é a padrão (${cfg.baud})."
             best.signatures.forEach { concl += "Detectado: $it." }
+            if (junkNote != null) concl += "O chip/cabo também emitiu $junkNote em fluxo contínuo (≈ 260 KB/s), independente do baud; o app filtrou esse ruído e manteve só os dados reais."
+            val next = mutableListOf<String>()
+            if (firmware != null) {
+                concl += firmware.lines()
+                if (firmware.espAt) {
+                    concl += "Indícios de firmware Espressif AT de fábrica (" + firmware.evidence.joinToString(", ") + "). " +
+                        "É inferência pelo log de boot: o app não envia comandos AT para confirmar."
+                    concl += "Em ESP-AT a porta de comandos AT costuma ficar na UART1 (GPIO16 RX / GPIO17 TX), não no conector USB; pelo USB normalmente saem só os logs de boot. " +
+                        "Isso explica o silêncio depois do boot e a ausência de servidor web na rede do ESP32."
+                    next += "Para usar esta placa com o app EletricMotor é preciso gravar o firmware gateway (pasta firmware/esp32-gateway) a partir do PC (Arduino IDE ou esptool). Este app NUNCA grava firmware."
+                    next += "Se preferir manter o ESP-AT, os comandos AT precisam de um adaptador USB-serial separado ligado em GPIO16/GPIO17 (confirme os pinos no manual da sua versão)."
+                }
+            }
+            next += SEND_HINT
             Result(
                 "Recebemos dados do ESP32 (${best.baud} baud).",
                 if (best.signatures.isNotEmpty()) Confidence.ALTA else Confidence.MEDIA,
                 concl,
-                listOf(SEND_HINT)
+                next
             )
         }
     }
