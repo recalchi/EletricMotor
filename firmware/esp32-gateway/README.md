@@ -31,6 +31,8 @@ Firmware de exemplo que publica a temperatura de um sensor **externo** no protoc
 ## Versão e atualização do firmware
 - O firmware anuncia `# fw name=esp32-gateway version=X.Y.Z …` no boot e a cada 60 s; o app EletricMotor mostra a
   versão e avisa quando há atualização no catálogo (`src/integrations/firmware.ts`).
+- **Atualizar pelo app** (tela Firmware): mesmas verificações, backup conferido pelo chip, barra de progresso com
+  tempo estimado por etapa, erro resumido e histórico. No APK (USB OTG) ainda não testado em hardware.
 - **Atualizar pelo PC (Windows)** com verificações de segurança:
   ```powershell
   # só confere tudo e faz backup, sem gravar:

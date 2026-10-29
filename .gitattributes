@@ -3,3 +3,4 @@
 *.png binary
 *.bat text eol=crlf
 *.jar binary
+*.bin binary

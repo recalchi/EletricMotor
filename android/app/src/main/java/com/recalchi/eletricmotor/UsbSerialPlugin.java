@@ -200,6 +200,39 @@ public class UsbSerialPlugin extends Plugin implements SerialInputOutputManager.
         }
     }
 
+    /** Somente gravação de firmware (src/integrations/flasher.ts) — ação explícita na tela Firmware. */
+    @PluginMethod
+    public void write(PluginCall call) {
+        if (port == null) {
+            call.reject("Porta fechada");
+            return;
+        }
+        try {
+            port.write(Base64.decode(call.getString("base64", ""), Base64.DEFAULT), 2000);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Falha ao escrever: " + e.getMessage());
+        }
+    }
+
+    /** Somente gravação de firmware: DTR/RTS levam o ESP32 ao modo de gravação e o reiniciam. */
+    @PluginMethod
+    public void setSignals(PluginCall call) {
+        if (port == null) {
+            call.reject("Porta fechada");
+            return;
+        }
+        try {
+            Boolean dtr = call.getBoolean("dtr");
+            Boolean rts = call.getBoolean("rts");
+            if (dtr != null) port.setDTR(dtr);
+            if (rts != null) port.setRTS(rts);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Falha ao alterar DTR/RTS: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void close(PluginCall call) {
         closeQuietly();

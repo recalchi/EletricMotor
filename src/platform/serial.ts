@@ -4,6 +4,7 @@ import { isNative } from './native';
 /**
  * Enlace serial somente-leitura: Web Serial no navegador; no APK, plugin nativo "UsbSerial"
  * (android/app/src/main/java/.../UsbSerialPlugin.java, baseado em usb-serial-for-android) com USB OTG.
+ * A escrita (write/setSignals) existe só para a gravação de firmware — ver requestFlashPort().
  */
 export interface SerialLink {
   readonly label: string;
@@ -88,6 +89,10 @@ interface UsbSerialPlugin {
   listAllUsb(): Promise<{ devices: UsbAnyDevice[]; hostSupported: boolean }>;
   open(opts: { deviceId?: number; baudRate: number }): Promise<{ device: UsbDeviceInfo }>;
   close(): Promise<void>;
+  /** Somente gravação de firmware (FlashPort). */
+  write(opts: { base64: string }): Promise<void>;
+  /** Somente gravação de firmware: DTR/RTS levam o ESP32 ao modo de gravação e o reiniciam. */
+  setSignals(opts: { dtr?: boolean; rts?: boolean }): Promise<void>;
   addListener(event: 'data', cb: (d: { base64: string }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'error', cb: (d: { message: string }) => void): Promise<PluginListenerHandle>;
 }
@@ -137,4 +142,97 @@ async function openNative(baudRate: number): Promise<SerialLink> {
       await UsbSerial.close().catch(() => undefined);
     },
   };
+}
+
+// ───────────────────────── Porta para gravação de firmware
+
+/**
+ * Subconjunto da API Web Serial (SerialPort) usado pelo esptool-js. No navegador é a própria porta; no APK, um
+ * adaptador sobre o plugin nativo. Usado APENAS por integrations/flasher.ts.
+ */
+export interface FlashPort {
+  readonly readable: ReadableStream<Uint8Array> | null;
+  readonly writable: WritableStream<Uint8Array> | null;
+  open(opts: { baudRate: number }): Promise<void>;
+  close(): Promise<void>;
+  setSignals(s: { dataTerminalReady?: boolean; requestToSend?: boolean }): Promise<void>;
+  getInfo(): { usbVendorId?: number; usbProductId?: number };
+}
+
+export function flashSupported(): boolean {
+  return serialSupported();
+}
+
+/** Pede ao usuário a porta do gateway (seletor do navegador ou permissão USB do Android). */
+export async function requestFlashPort(): Promise<FlashPort> {
+  if (isNative()) {
+    const { devices } = await UsbSerial.listDevices();
+    if (!devices.length) throw new Error('Nenhum dispositivo USB serial encontrado — conecte o gateway via cabo OTG');
+    return new NativeFlashPort(devices[0]);
+  }
+  if (!navigator.serial) throw new Error('Web Serial indisponível — use Chrome ou Edge no computador');
+  return (await navigator.serial.requestPort()) as unknown as FlashPort;
+}
+
+const bytesToB64 = (b: Uint8Array) => {
+  let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+
+class NativeFlashPort implements FlashPort {
+  readable: ReadableStream<Uint8Array> | null = null;
+  writable: WritableStream<Uint8Array> | null = null;
+  private handles: PluginListenerHandle[] = [];
+  private dtr = true;
+  private rts = true;
+
+  constructor(private device: UsbDeviceInfo) {}
+
+  getInfo() {
+    return { usbVendorId: this.device.vendorId, usbProductId: this.device.productId };
+  }
+
+  async open({ baudRate }: { baudRate: number }) {
+    await UsbSerial.open({ deviceId: this.device.deviceId, baudRate });
+    let ctrl!: ReadableStreamDefaultController<Uint8Array>;
+    this.readable = new ReadableStream<Uint8Array>({
+      start: (c) => {
+        ctrl = c;
+      },
+    });
+    this.handles.push(
+      await UsbSerial.addListener('data', (d) => {
+        try {
+          ctrl.enqueue(b64ToBytes(d.base64));
+        } catch {
+          // leitor já cancelado
+        }
+      }),
+      await UsbSerial.addListener('error', (d) => {
+        try {
+          ctrl.error(new Error(d.message));
+        } catch {
+          // fluxo já encerrado
+        }
+      }),
+    );
+    this.writable = new WritableStream<Uint8Array>({
+      write: (chunk) => UsbSerial.write({ base64: bytesToB64(chunk) }),
+    });
+  }
+
+  async close() {
+    await Promise.all(this.handles.map((h) => h.remove()));
+    this.handles = [];
+    this.readable = null;
+    this.writable = null;
+    await UsbSerial.close().catch(() => undefined);
+  }
+
+  async setSignals(s: { dataTerminalReady?: boolean; requestToSend?: boolean }) {
+    if (s.dataTerminalReady !== undefined) this.dtr = s.dataTerminalReady;
+    if (s.requestToSend !== undefined) this.rts = s.requestToSend;
+    await UsbSerial.setSignals({ dtr: this.dtr, rts: this.rts });
+  }
 }

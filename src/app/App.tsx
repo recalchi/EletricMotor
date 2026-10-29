@@ -17,6 +17,7 @@ const SensorsPage = lazy(() => import('../features/sensors/SensorsPage'));
 const TelemetryPage = lazy(() => import('../features/telemetry/TelemetryPage'));
 const MaintenancePage = lazy(() => import('../features/maintenance/MaintenancePage'));
 const ConnectivityPage = lazy(() => import('../features/connectivity/ConnectivityPage'));
+const FirmwarePage = lazy(() => import('../features/firmware/FirmwarePage'));
 const LabPage = lazy(() => import('../features/simulator/LabPage'));
 const ReportsPage = lazy(() => import('../features/reports/ReportsPage'));
 const TechnicalReport = lazy(() => import('../features/reports/TechnicalReport'));
@@ -68,6 +69,7 @@ function Gate() {
             <Route path="telemetria" element={<TelemetryPage />} />
             <Route path="manutencao" element={<MaintenancePage />} />
             <Route path="conectividade" element={<ConnectivityPage />} />
+            <Route path="firmware" element={<FirmwarePage />} />
             <Route path="laboratorio" element={<LabPage />} />
             <Route path="relatorios" element={<ReportsPage />} />
             <Route path="relatorios/tecnico" element={<TechnicalReport />} />

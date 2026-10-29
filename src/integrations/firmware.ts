@@ -1,10 +1,11 @@
 /**
- * Versão de firmware dos gateways e orientação de atualização.
+ * Versão de firmware dos gateways, catálogo de versões publicadas e orientação de atualização.
  *
  * O firmware anuncia-se com uma linha de log (não é telemetria):
  *   # fw name=esp32-gateway version=1.0.0 emgp=1 dev=esp32-hub chip_rev=301 sdk=v5.5.5
- * O app só LÊ essa linha. A gravação é feita no PC com o script
- * `firmware/esp32-gateway/tools/atualizar-firmware.ps1` (o app nunca grava firmware).
+ * Os adaptadores de telemetria só LEEM essa linha. A gravação acontece apenas na tela Firmware (ação explícita
+ * do usuário, com verificações e backup — ver integrations/flasher.ts) ou no PC com
+ * `firmware/esp32-gateway/tools/atualizar-firmware.ps1`.
  */
 
 export interface FirmwareAnnounce {
@@ -16,13 +17,27 @@ export interface FirmwareAnnounce {
   sdk?: string;
 }
 
+/** Uma parte gravável do firmware (layout padrão do Arduino ESP32 Dev Module, 4 MB). */
+export interface FirmwareArtifact {
+  role: 'bootloader' | 'particoes' | 'otadata' | 'app';
+  file: string;
+  address: number;
+  size: number;
+  sha256: string;
+  /** MD5 que o próprio chip calcula sobre a região gravada (verificação pós-gravação). */
+  md5: string;
+}
+
 export interface FirmwareRelease {
   name: string;
   version: string;
-  /** SHA-256 do binário completo (merged) para placas ESP32 Dev Module / 4 MB. */
+  /** SHA-256 do binário completo (merged, 4 MB) usado pelo script do PC. */
   sha256: string;
   date: string;
   notes: string;
+  /** Pasta (em /public) com as partes; ausente = versão só disponível pelo script do PC. */
+  path?: string;
+  artifacts?: FirmwareArtifact[];
 }
 
 /** Catálogo das versões publicadas. Atualize junto com FW_VERSION no .ino. */
@@ -33,6 +48,41 @@ export const FIRMWARE_CATALOG: FirmwareRelease[] = [
     sha256: 'ee79bf5dd9b8c9a5735c29ba37d06962e1381ba50fb1df8e533ed3a5f6a0bd58',
     date: '2026-10-29',
     notes: 'Primeira versão com anúncio de versão (# fw). DS18B20 no GPIO 4, EMGP v1 por USB/BLE/HTTPS.',
+    path: 'firmware/esp32-gateway/1.0.0',
+    artifacts: [
+      {
+        role: 'bootloader',
+        file: 'bootloader.bin',
+        address: 0x1000,
+        size: 24992,
+        sha256: '47bbbfca119fe87190f63a67af9d85adff6433bcf3812ec92a9b9c9416a53ad1',
+        md5: '68acc136fae0daa0e5605d8b014254a4',
+      },
+      {
+        role: 'particoes',
+        file: 'partitions.bin',
+        address: 0x8000,
+        size: 3072,
+        sha256: '148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1',
+        md5: 'a039c66cd3488176037b616b7595fe72',
+      },
+      {
+        role: 'otadata',
+        file: 'boot_app0.bin',
+        address: 0xe000,
+        size: 8192,
+        sha256: 'f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0',
+        md5: 'e6327541e2dc394ca2c3b3280ac0f39f',
+      },
+      {
+        role: 'app',
+        file: 'app.bin',
+        address: 0x10000,
+        size: 673968,
+        sha256: '7cd5cf4d8d88a883b82388a1ba05961fbc02134a415ee5f279dc42ef6b64380f',
+        md5: '010e3fbdd675467c28894de2614fe755',
+      },
+    ],
   },
 ];
 
@@ -90,7 +140,7 @@ export function updateAdvice(fw: FirmwareAnnounce, catalog = FIRMWARE_CATALOG): 
     status: 'desatualizado',
     latest,
     message:
-      `Atualização disponível: ${fw.version} → ${latest.version}. No PC, rode ` +
-      `firmware/esp32-gateway/tools/atualizar-firmware.ps1 (faz backup, valida e grava com verificação).`,
+      `Atualização disponível: ${fw.version} → ${latest.version}. Atualize na tela Firmware do app ou, no PC, ` +
+      `com firmware/esp32-gateway/tools/atualizar-firmware.ps1 (ambos fazem backup, validam e gravam com verificação).`,
   };
 }

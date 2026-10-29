@@ -57,8 +57,12 @@ const blankDevice = (): DeviceProfile => ({
 /** Modelos prontos para os sensores propostos mais simples. */
 const TEMPLATES: { label: string; device: Partial<DeviceProfile> }[] = [
   {
-    label: 'ESP32 + temperatura do motor hub',
+    label: 'Gateway ESP32 (firmware esp32-gateway) + temperatura do motor hub',
     device: {
+      // id/nome iguais ao DEVICE_ID do firmware — as mensagens chegam com "dev":"esp32-hub"
+      id: 'esp32-hub',
+      name: 'Gateway ESP32 (esp32-hub)',
+      firmware: 'esp32-gateway@1.0.0',
       transport: 'serial',
       sensorCandidateId: 'temp-hub-surface',
       channels: [{ channel: 't1', componentId: 'hub-motor', quantity: 'temperature', unit: '°C', scale: 1, offset: 0 }],

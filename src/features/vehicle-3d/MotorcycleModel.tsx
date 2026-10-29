@@ -477,21 +477,25 @@ export function MotorcycleModel() {
       bayEnd: [-0.21, 0.33].map((x) => new THREE.BoxGeometry(0.01, 0.36, 0.28).translate(x, 0.56, 0)),
       charger: new RoundedBoxGeometry(0.15, 0.09, 0.15, 2, 0.01),
       dcdc: new RoundedBoxGeometry(0.08, 0.06, 0.1, 2, 0.006),
-      breaker: new RoundedBoxGeometry(0.05, 0.07, 0.04, 2, 0.006),
+      breaker: new RoundedBoxGeometry(0.07, 0.04, 0.05, 2, 0.006),
+      breakerLever: new RoundedBoxGeometry(0.012, 0.02, 0.022, 1, 0.003),
+      bmsBoard: new RoundedBoxGeometry(0.12, 0.012, 0.08, 1, 0.003),
       port: new THREE.CylinderGeometry(0.026, 0.026, 0.03, 24),
       portCap: new THREE.CylinderGeometry(0.03, 0.03, 0.008, 24),
 
       // Chicote (laranja = alta tensão; fino = sinais)
       harness: [
+        // alta tensão: topo das baterias → disjuntor (sob o banco) → controladora
         tube(
           [
-            [-0.07, 0.75, 0.05],
-            [0.06, 0.78, 0.09],
             [0.19, 0.75, 0.05],
-            [0.36, 0.68, 0.12],
-            [0.34, 0.45, 0.08],
-            [0.12, 0.34, 0.06],
-            [-0.02, 0.33, 0.05],
+            [0.06, 0.775, 0.09],
+            [-0.07, 0.75, 0.05],
+            [-0.22, 0.755, 0.07],
+            [-0.3, 0.745, 0.07],
+            [-0.3, 0.55, 0.1],
+            [-0.12, 0.37, 0.08],
+            [0.02, 0.33, 0.06],
           ],
           0.009,
           80,
@@ -722,8 +726,18 @@ export function MotorcycleModel() {
       <Part id="dcdc" color="#64748b" metalness={0.6} roughness={0.4}>
         {(m) => <mesh geometry={g.dcdc} material={m} position={[0.41, 0.6, 0]} />}
       </Part>
+      {(['bms-a', 'bms-b'] as const).map((id) => (
+        <Part key={id} id={id} color="#166534" metalness={0.2} roughness={0.6} emissive="#22c55e" emissiveIntensity={0.15}>
+          {(m) => <mesh geometry={g.bmsBoard} material={m} position={[ANCHORS[id][0], ANCHORS[id][1], -0.05]} />}
+        </Part>
+      ))}
       <Part id="main-breaker" color="#b91c1c" metalness={0.3} roughness={0.5}>
-        {(m) => <mesh geometry={g.breaker} material={m} position={[0.36, 0.7, 0.12]} />}
+        {(m) => (
+          <group position={ANCHORS['main-breaker']}>
+            <mesh geometry={g.breaker} material={m} />
+            <mesh geometry={g.breakerLever} material={M.satinBlack} position={[0, 0.028, 0]} />
+          </group>
+        )}
       </Part>
       <Part id="charge-port" color="#e5e7eb" metalness={0.5} roughness={0.4}>
         {(m) => (

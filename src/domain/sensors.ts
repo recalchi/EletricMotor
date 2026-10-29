@@ -1,7 +1,8 @@
 import type { SensorCandidate } from './types';
 
 /**
- * Inventário de instrumentação PROPOSTA. Nada aqui está instalado.
+ * Inventário de instrumentação ADICIONAL: em implantação (hardware/firmware próprios com suporte no app) e
+ * sugeridos. Nada aqui está montado na moto ainda (status 'instalado' = montado e validado).
  * Custos são faixas de referência de mercado (BRL, out/2026) a validar com orçamento real.
  * Escolha final de hardware só após validação da topologia física e requisitos de segurança.
  */
@@ -45,23 +46,53 @@ export const SENSOR_CANDIDATES: SensorCandidate[] = [
     status: 'proposto',
   },
   {
+    id: 'gateway-esp32',
+    name: 'Gateway ESP32 (cérebro da instrumentação)',
+    objective: 'Concentrar os sensores adicionais e publicar as leituras no app (EMGP v1)',
+    quantity: 'Versão de firmware, sequência de mensagens, RSSI do Wi‑Fi',
+    location: 'Sob o banco / rabeta, em caixa fechada, longe da alta tensão e do disjuntor',
+    componentId: 'gateway',
+    technology: 'ESP32-D0WD-V3 (4 MB) com firmware próprio esp32-gateway',
+    interface: 'USB serial 115200 · Bluetooth NUS · Wi‑Fi → HTTPS',
+    power: 'Bateria própria ou 12 V auxiliar com fusível (instalação por profissional) — nunca da alta tensão',
+    isolation: 'Somente leitura da moto; nenhuma ligação com a alta tensão',
+    accuracy: '—',
+    sampleRate: 'Mensagem a cada 2 s; anúncio de versão no boot e a cada 60 s',
+    feasibility: 'alta',
+    risks: 'Umidade e vibração na fixação; alimentação mal protegida',
+    pendingValidation: 'Anúncio BLE em campo; fixação e alimentação na moto',
+    estimatedCostBRL: '40–80 (placa) + caixa',
+    status: 'em_implantacao',
+    channel: 'st.rssi',
+    firmware: 'esp32-gateway@1.0.0',
+    progress:
+      'Firmware 1.0.0 gravado e verificado por hash na placa real; boot sem erros. O app lê a versão (# fw) e avisa quando houver atualização. Ainda não montado na moto.',
+  },
+  {
     id: 'temp-hub-surface',
-    name: 'Temperatura superficial do motor hub',
+    name: 'Temperatura do motor hub (eixo)',
     objective: 'Tendência térmica do motor sob carga',
     quantity: 'Temperatura (°C)',
-    location: 'Carcaça externa do motor hub (lado oposto ao freio)',
+    // a carcaça externa de um motor hub GIRA com a roda — sensor com fio só na parte estática (eixo)
+    location: 'Eixo do motor hub, na ponteira da balança junto à saída do cabo de fase (parte ESTÁTICA)',
     componentId: 'hub-motor',
-    technology: 'Termopar tipo K / DS18B20 colado com fita térmica, ou IR sem contato',
-    interface: 'Módulo independente com BLE',
-    power: 'Bateria própria do módulo — NÃO derivar da alta tensão',
-    isolation: 'Sem conexão elétrica com motor/controladora',
-    accuracy: '±1–2 °C',
-    sampleRate: '1 Hz',
-    feasibility: 'media',
-    risks: 'Peça rotativa: cabo não pode passar na roda; superfície ≠ temperatura interna',
-    pendingValidation: 'Ponto de fixação estático; faixa de temperatura de operação',
-    estimatedCostBRL: '80–250',
-    status: 'proposto',
+    technology:
+      'DS18B20 (1‑Wire) encostado ao eixo com pasta/fita térmica — o estator é fixo no eixo, boa referência térmica. Alternativa sem contato: IR (MLX90614) apontado para a carcaça.',
+    interface: 'Fio até o gateway ESP32 (GPIO 4, resistor 4,7 kΩ para 3V3) → canal t1',
+    power: 'Pelo gateway (3,3 V) — NÃO derivar da alta tensão',
+    isolation: 'Sem conexão elétrica com motor/controladora; não encostar no cabo de fase',
+    accuracy: '±0,5 °C (datasheet, −10…85 °C); eixo ≠ temperatura interna do enrolamento',
+    sampleRate: '0,5 Hz (1 leitura a cada 2 s — firmware 1.0.0)',
+    feasibility: 'alta',
+    risks:
+      'A carcaça externa gira: nunca prender cabo nela. Limite do DS18B20: 125 °C. Proteger o cabo contra água e atrito na balança.',
+    pendingValidation: 'Ligar o sensor ao gateway (hoje reporta "desconectado"); ponto de fixação no eixo; baseline em uso',
+    estimatedCostBRL: '15–40 (sensor à prova d’água + resistor)',
+    status: 'em_implantacao',
+    channel: 't1',
+    firmware: 'esp32-gateway@1.0.0',
+    progress:
+      'Firmware lê o DS18B20 e publica t1; o app já mapeia t1 → motor hub (modelo pronto em Conectividade). Falta ligar o sensor físico.',
   },
   {
     id: 'vib-axle',
@@ -87,7 +118,7 @@ export const SENSOR_CANDIDATES: SensorCandidate[] = [
     name: 'GPS independente',
     objective: 'Distância, velocidade e trajetos independentes do painel',
     quantity: 'Posição, velocidade',
-    location: 'Sob o banco / rabeta, com visada do céu',
+    location: 'Sob o banco / rabeta, com visada do céu (módulo GNSS ligado ao gateway)',
     componentId: 'gateway',
     technology: 'Módulo GNSS (ou smartphone)',
     interface: 'Integrado ao gateway / app',
@@ -125,7 +156,7 @@ export const SENSOR_CANDIDATES: SensorCandidate[] = [
     name: 'Umidade no compartimento das baterias',
     objective: 'Detectar umidade/condensação',
     quantity: 'Umidade relativa (%), temperatura (°C)',
-    location: 'Compartimento das baterias (sem contato com terminais)',
+    location: 'Parede do compartimento das baterias — nunca sobre o topo da bateria (onde fica o BMS) nem nos terminais',
     componentId: 'battery-bay',
     technology: 'Sensor UR/T com BLE',
     interface: 'BLE → gateway',
@@ -163,7 +194,7 @@ export const SENSOR_CANDIDATES: SensorCandidate[] = [
     name: 'Leitura do BMS (interface a investigar)',
     objective: 'SOC, tensão, corrente, temperatura por bateria',
     quantity: 'V, A, °C, %',
-    location: 'Interface do BMS — DESCONHECIDA',
+    location: 'Topo de cada bateria (placa do BMS sob a tampa superior) — conector e protocolo DESCONHECIDOS',
     componentId: 'battery-a',
     technology: 'A definir após documentação (não presumir CAN/UART/BLE)',
     interface: 'Desconhecida',

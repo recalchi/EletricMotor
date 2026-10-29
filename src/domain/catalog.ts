@@ -18,6 +18,13 @@ const hyp = (label: string, value: string, source: string, note?: string): Spec 
   source,
   note,
 });
+/** Posição observada pelo proprietário na moto real (29/10/2026). */
+const insp = (label: string, value: string): Spec => ({
+  label,
+  value,
+  evidence: 'inspecao',
+  source: 'Inspeção do proprietário (29/10/2026)',
+});
 const unk = (label: string, note?: string): Spec => ({
   label,
   value: '—',
@@ -255,20 +262,21 @@ export const CATALOG: VehicleComponent[] = [
     name: 'BMS da bateria A',
     group: 'energia',
     parentId: 'battery-a',
-    description: 'Sistema de gerenciamento interno da bateria A.',
+    description: 'Sistema de gerenciamento da bateria A — placa no topo da bateria, sob a tampa superior.',
     function: 'Proteção, balanceamento e medição das células.',
-    specs: [unk('Interface de comunicação (CAN/UART/BLE?)', 'NÃO presumir. Investigar documentação.')],
-    mesh3d: false,
+    specs: [
+      insp('Posição', 'Topo da bateria (parte superior), não na lateral'),
+      unk('Interface de comunicação (CAN/UART/BLE?)', 'NÃO presumir. Investigar documentação.'),
+    ],
   }),
   c({
     id: 'bms-b',
     name: 'BMS da bateria B',
     group: 'energia',
     parentId: 'battery-b',
-    description: 'Sistema de gerenciamento interno da bateria B.',
+    description: 'Sistema de gerenciamento da bateria B — placa no topo da bateria, sob a tampa superior.',
     function: 'Proteção, balanceamento e medição das células.',
-    specs: [unk('Interface de comunicação')],
-    mesh3d: false,
+    specs: [insp('Posição', 'Topo da bateria (parte superior), não na lateral'), unk('Interface de comunicação')],
   }),
   c({
     id: 'charger',
@@ -291,8 +299,10 @@ export const CATALOG: VehicleComponent[] = [
     id: 'main-breaker',
     name: 'Disjuntor geral e conectores das baterias',
     group: 'energia',
-    description: 'Proteção e seccionamento do circuito de alta tensão.',
+    description:
+      'Proteção e seccionamento do circuito de alta tensão. Fica embaixo do banco, sobre a carenagem — não é preso ao banco.',
     function: 'Proteção contra sobrecorrente; desligamento.',
+    specs: [insp('Posição', 'Sob o banco, sobre a carenagem (acesso levantando o banco)')],
     coverage: 'inspecao_manual',
   }),
   c({
@@ -435,11 +445,27 @@ export const CATALOG: VehicleComponent[] = [
   // ───────────── Instrumentação futura
   c({
     id: 'gateway',
-    name: 'Gateway de telemetria (futuro)',
+    name: 'Gateway de telemetria ESP32 (em implantação)',
     group: 'instrumentacao',
-    description: 'Dispositivo intermediário proposto para leitura somente-leitura.',
-    function: 'Coleta, normalização e envio de dados ao serviço de ingestão.',
-    specs: [unk('Hardware', 'Escolher apenas após validar topologia física e segurança.')],
+    description:
+      'Cérebro da instrumentação: ESP32 próprio que lê os sensores adicionais e publica EMGP por USB, Bluetooth e Wi‑Fi. ' +
+      'Testado em bancada; ainda não montado na moto. Posição planejada: sob o banco/rabeta, longe da alta tensão.',
+    function: 'Coleta, normalização e envio de dados ao serviço de ingestão (somente leitura da moto).',
+    specs: [
+      {
+        label: 'Hardware',
+        value: 'ESP32-D0WD-V3 rev 3.1, flash 4 MB, USB CP2102',
+        evidence: 'inspecao',
+        source: 'Leitura do chip por esptool (29/10/2026)',
+      },
+      {
+        label: 'Firmware',
+        value: 'esp32-gateway 1.0.0 (EMGP v1)',
+        evidence: 'inspecao',
+        source: 'Gravação verificada por hash + anúncio "# fw" no boot (29/10/2026)',
+      },
+      unk('Fixação e alimentação na moto', 'Bateria própria ou 12 V auxiliar com fusível — nunca da alta tensão.'),
+    ],
     mesh3d: true,
   }),
 ];

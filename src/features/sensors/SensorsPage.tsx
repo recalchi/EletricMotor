@@ -1,14 +1,76 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../app/store';
+import { HARDWARE, useReading } from '../../app/telemetry';
 import { CATALOG, getComponent } from '../../domain/catalog';
 import { SENSOR_CANDIDATES } from '../../domain/sensors';
-import { Button, Card, PageHeader, cx } from '../../shared/ui';
+import type { SensorCandidate } from '../../domain/types';
+import { Button, Card, PageHeader, Reading, cx } from '../../shared/ui';
 
 const FEAS = { alta: 'text-emerald-300', media: 'text-amber-300', baixa: 'text-red-300' };
+const STATUS_LABEL: Record<SensorCandidate['status'], string> = {
+  proposto: 'sugerido',
+  em_avaliacao: 'em avaliação',
+  em_implantacao: 'em implantação',
+  instalado: 'instalado',
+};
+
+const deploying = SENSOR_CANDIDATES.filter((s) => s.status === 'em_implantacao' || s.status === 'instalado');
+const suggested = SENSOR_CANDIDATES.filter((s) => s.status === 'proposto' || s.status === 'em_avaliacao');
+
+/** Leitura ao vivo do canal de temperatura do motor hub (t1) quando o gateway está conectado. */
+function HubTemp() {
+  const dv = useReading('hub-motor', 'temperature', '°C');
+  return <Reading label="t1 · temperatura do motor hub" dv={dv} />;
+}
+
+/** Status do gateway: versão anunciada pelo firmware em qualquer adaptador físico. */
+function GatewayStatus() {
+  const fw = HARDWARE.map((a) => ({ a, st: a.status() })).find((x) => x.st.firmware);
+  if (!fw)
+    return (
+      <p className="text-xs text-slate-400">
+        Gateway não conectado agora.{' '}
+        <Link to="/conectividade" className="text-cyanx-300 underline">
+          Conectar
+        </Link>
+      </p>
+    );
+  return (
+    <p className={cx('text-xs', fw.st.firmwareAdvice?.status === 'desatualizado' ? 'text-amber-300' : 'text-emerald-300')}>
+      {fw.st.firmware!.name} v{fw.st.firmware!.version} via {fw.a.name} — {fw.st.firmwareAdvice?.message}{' '}
+      <Link to="/firmware" className="text-cyanx-300 underline">
+        Firmware
+      </Link>
+    </p>
+  );
+}
+
+function SensorList({ items, sel, onSel }: { items: SensorCandidate[]; sel: string; onSel: (id: string) => void }) {
+  return (
+    <div className="space-y-1">
+      {items.map((x) => (
+        <button
+          key={x.id}
+          onClick={() => onSel(x.id)}
+          className={cx(
+            'flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm',
+            sel === x.id ? 'bg-orange-500/10 text-orange-200 ring-1 ring-orange-400/40' : 'text-slate-300 hover:bg-ink-800',
+          )}
+        >
+          <span>
+            {x.name}
+            {x.channel && <span className="ml-1 font-mono text-[11px] text-cyanx-300">{x.channel}</span>}
+          </span>
+          <span className={cx('shrink-0 text-xs', FEAS[x.feasibility])}>viabilidade {x.feasibility}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function SensorsPage() {
-  const [sel, setSel] = useState(SENSOR_CANDIDATES[0].id);
+  const [sel, setSel] = useState(deploying[0]?.id ?? SENSOR_CANDIDATES[0].id);
   const s = SENSOR_CANDIDATES.find((x) => x.id === sel)!;
   const nav = useNavigate();
   const select = useApp((st) => st.select);
@@ -16,12 +78,13 @@ export default function SensorsPage() {
   const original = CATALOG.flatMap((c) =>
     c.signals.filter((x) => x.availability !== 'sensor_futuro').map((x) => ({ c, x })),
   );
+  const installed = SENSOR_CANDIDATES.filter((x) => x.status === 'instalado').length;
 
   return (
     <div className="space-y-3">
       <PageHeader
         title="Sensores e instrumentação"
-        subtitle="Separação rigorosa: leituras do sistema original (a investigar) × sensores adicionais propostos. Nada está instalado."
+        subtitle="Três grupos: o que a moto já tem (a investigar), o que está em implantação com suporte no app e o que é sugerido."
         right={
           <Button
             onClick={() => {
@@ -33,12 +96,30 @@ export default function SensorsPage() {
           </Button>
         }
       />
-      <div className="grid gap-3 lg:grid-cols-2">
+
+      <div className="grid grid-cols-2 gap-2 text-center text-xs md:grid-cols-4">
+        {(
+          [
+            ['Sistema original', original.length, 'sinais a investigar', 'text-cyanx-300'],
+            ['Em implantação', deploying.length, 'com suporte no app', 'text-emerald-300'],
+            ['Sugeridos', suggested.length, 'propostos / em avaliação', 'text-orange-300'],
+            ['Instalados na moto', installed, 'montados e validados', 'text-slate-200'],
+          ] as const
+        ).map(([t, n, sub, tone]) => (
+          <div key={t} className="panel p-2" data-testid={`sensor-count-${t}`}>
+            <div className={cx('text-2xl font-semibold', tone)}>{n}</div>
+            <div className="text-slate-200">{t}</div>
+            <div className="text-slate-500">{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-3">
         <Card
           title={
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-cyanx-400" />
-              Sistema original — sinais a investigar
+              Já existentes — sistema original
             </span>
           }
         >
@@ -66,7 +147,27 @@ export default function SensorsPage() {
             </tbody>
           </table>
           <p className="mt-2 text-[11px] text-slate-500">
-            Instalados e validados: 0. Não presumir CAN/UART/BLE/OBD sem documentação.
+            Sensores de fábrica (BMS no topo de cada bateria, controladora, painel). Não presumir CAN/UART/BLE/OBD sem
+            documentação.
+          </p>
+        </Card>
+
+        <Card
+          title={
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              Em implantação — suporte no app
+            </span>
+          }
+        >
+          <SensorList items={deploying} sel={sel} onSel={setSel} />
+          <div className="mt-3 space-y-2 rounded border border-ink-700 p-2">
+            <GatewayStatus />
+            <HubTemp />
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Hardware e firmware próprios (gateway ESP32). As leituras só entram como REAL depois de validar o dispositivo em
+            Conectividade.
           </p>
         </Card>
 
@@ -74,38 +175,32 @@ export default function SensorsPage() {
           title={
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-proposal" />
-              Sensores adicionais propostos
+              Sugeridos
             </span>
           }
         >
-          <div className="space-y-1">
-            {SENSOR_CANDIDATES.map((x) => (
-              <button
-                key={x.id}
-                onClick={() => setSel(x.id)}
-                className={cx(
-                  'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm',
-                  sel === x.id
-                    ? 'bg-orange-500/10 text-orange-200 ring-1 ring-orange-400/40'
-                    : 'text-slate-300 hover:bg-ink-800',
-                )}
-              >
-                <span>{x.name}</span>
-                <span className={cx('text-xs', FEAS[x.feasibility])}>viabilidade {x.feasibility}</span>
-              </button>
-            ))}
-          </div>
+          <SensorList items={suggested} sel={sel} onSel={setSel} />
         </Card>
       </div>
 
       <Card
         title={s.name}
         right={
-          <span className="rounded bg-orange-500/15 px-2 py-0.5 text-xs text-orange-300">
-            {s.status.replace('_', ' ')}
+          <span
+            className={cx(
+              'rounded px-2 py-0.5 text-xs',
+              s.status === 'em_implantacao' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-orange-500/15 text-orange-300',
+            )}
+          >
+            {STATUS_LABEL[s.status]}
           </span>
         }
       >
+        {s.progress && (
+          <p className="mb-3 rounded border border-emerald-400/30 bg-emerald-500/5 p-2 text-sm text-emerald-100">
+            {s.progress}
+          </p>
+        )}
         <dl className="grid gap-x-6 gap-y-2 text-sm md:grid-cols-2 xl:grid-cols-3">
           {(
             [
@@ -113,8 +208,10 @@ export default function SensorsPage() {
               ['Grandeza', s.quantity],
               ['Posição planejada', s.location],
               ['Componente', getComponent(s.componentId)?.name],
-              ['Tecnologia candidata', s.technology],
+              ['Tecnologia', s.technology],
               ['Interface', s.interface],
+              ['Canal EMGP', s.channel],
+              ['Firmware', s.firmware],
               ['Alimentação', s.power],
               ['Isolamento', s.isolation],
               ['Precisão', s.accuracy],
@@ -122,18 +219,24 @@ export default function SensorsPage() {
               ['Riscos', s.risks],
               ['Validações pendentes', s.pendingValidation],
               ['Custo estimado (R$)', s.estimatedCostBRL],
-            ] as [string, string][]
-          ).map(([k, v]) => (
-            <div key={k}>
-              <dt className="text-[11px] uppercase tracking-wider text-slate-500">{k}</dt>
-              <dd className="text-slate-200">{v}</dd>
-            </div>
-          ))}
+            ] as [string, string | undefined][]
+          )
+            .filter(([, v]) => v)
+            .map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-[11px] uppercase tracking-wider text-slate-500">{k}</dt>
+                <dd className="text-slate-200">{v}</dd>
+              </div>
+            ))}
         </dl>
-        <div className="mt-3 flex gap-2">
-          <Button onClick={() => (select(s.componentId), setViewMode('sensores'), nav('/explorador'))}>
-            Localizar no 3D
-          </Button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button onClick={() => (select(s.componentId), setViewMode('sensores'), nav('/explorador'))}>Localizar no 3D</Button>
+          {s.status === 'em_implantacao' && (
+            <>
+              <Button onClick={() => nav('/conectividade')}>Conectar / cadastrar</Button>
+              <Button onClick={() => nav('/firmware')}>Firmware</Button>
+            </>
+          )}
         </div>
         <p className="mt-3 text-[11px] text-slate-500">
           Escolha final de hardware somente após validação da topologia física e dos requisitos de segurança. Custos são

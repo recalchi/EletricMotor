@@ -219,7 +219,17 @@ export interface SensorCandidate {
   risks: string;
   pendingValidation: string;
   estimatedCostBRL: string;
-  status: 'proposto' | 'em_avaliacao' | 'instalado';
+  /**
+   * proposto = sugestão; em_avaliacao = depende de documentação; em_implantacao = hardware e firmware próprios já
+   * existem e o app já os suporta (validação em andamento); instalado = montado na moto e validado.
+   */
+  status: 'proposto' | 'em_avaliacao' | 'em_implantacao' | 'instalado';
+  /** Canal EMGP que o firmware do gateway publica para este sensor (ex.: "t1"). */
+  channel?: string;
+  /** Firmware que lê o sensor (nome@versão mínima). */
+  firmware?: string;
+  /** Estado atual da implantação, em uma frase. */
+  progress?: string;
 }
 
 /** Canal de um dispositivo externo mapeado para componente/grandeza do catálogo, com calibração linear. */

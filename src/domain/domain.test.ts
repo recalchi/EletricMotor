@@ -150,3 +150,39 @@ describe('alertas', () => {
     expect(maintenanceDue({ everyDays: 30 }, undefined, { date: new Date(), odometerKm: 0 }).due).toBe(true);
   });
 });
+
+describe('posição dos componentes (inspeção do proprietário, 29/10/2026)', () => {
+  it('BMS fica no topo de cada bateria, não na lateral', async () => {
+    const { ANCHORS } = await import('../features/vehicle-3d/geometry');
+    for (const [bms, bat] of [
+      ['bms-a', 'battery-a'],
+      ['bms-b', 'battery-b'],
+    ]) {
+      expect(ANCHORS[bms][0]).toBeCloseTo(ANCHORS[bat][0]);
+      expect(ANCHORS[bms][1]).toBeGreaterThan(0.73); // topo da bateria (centro 0,56 + metade da altura 0,17)
+      expect(ANCHORS[bms][2]).toBe(0);
+    }
+    expect(CATALOG_BY_ID['bms-a'].specs.find((s) => s.label === 'Posição')?.evidence).toBe('inspecao');
+  });
+  it('disjuntor fica embaixo do banco, não na frente', async () => {
+    const { ANCHORS } = await import('../features/vehicle-3d/geometry');
+    const [x, y] = ANCHORS['main-breaker'];
+    expect(x).toBeLessThan(-0.1); // banco do piloto vai de x −0,10 a −0,55
+    expect(x).toBeGreaterThan(-0.55);
+    expect(y).toBeLessThan(0.775); // abaixo do assento
+    expect(CATALOG_BY_ID['main-breaker'].description).toMatch(/embaixo do banco/);
+  });
+});
+
+describe('sensores em implantação', () => {
+  it('têm canal EMGP, firmware e andamento descritos', () => {
+    const dep = SENSOR_CANDIDATES.filter((s) => s.status === 'em_implantacao');
+    expect(dep.map((s) => s.id)).toEqual(['gateway-esp32', 'temp-hub-surface']);
+    expect(dep.every((s) => s.channel && s.firmware?.startsWith('esp32-gateway@') && s.progress)).toBe(true);
+  });
+  it('sensor com fio do motor hub fica na parte estática (a carcaça gira)', () => {
+    const t = SENSOR_CANDIDATES.find((s) => s.id === 'temp-hub-surface')!;
+    expect(t.location).toMatch(/ESTÁTICA/);
+    expect(t.channel).toBe('t1');
+  });
+});

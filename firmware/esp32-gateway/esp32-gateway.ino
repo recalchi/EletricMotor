@@ -1,7 +1,8 @@
 /*
  * EletricMotor — gateway de referência (ESP32) — EMGP v1
  *
- * Lê um sensor de temperatura DS18B20 (ex.: colado na carcaça EXTERNA do motor hub, em ponto estático)
+ * Lê um sensor de temperatura DS18B20 no EIXO do motor hub (parte estática, junto à saída do cabo de fase —
+ * a carcaça externa de um motor hub gira com a roda; o estator é fixo no eixo) — canal t1 —
  * e publica mensagens EMGP por:
  *   - USB serial (115200 baud)        → app: Conectividade → "Gateway USB (Web Serial)"
  *   - Bluetooth LE (Nordic UART/NUS)  → app: "Gateway Bluetooth (UART/NUS)"

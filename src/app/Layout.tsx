@@ -19,6 +19,7 @@ export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/telemetria', label: 'Telemetria', icon: 'chart' },
   { to: '/manutencao', label: 'Manutenção', icon: 'wrench' },
   { to: '/conectividade', label: 'Conectividade', icon: 'plug' },
+  { to: '/firmware', label: 'Firmware', icon: 'chip' },
   { to: '/laboratorio', label: 'Laboratório', icon: 'flask' },
   { to: '/relatorios', label: 'Relatórios', icon: 'report' },
   { to: '/captura', label: 'Captura e diagnóstico', icon: 'history' },
