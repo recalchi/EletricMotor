@@ -58,6 +58,7 @@ class DiagnosticRunner(
 
     private companion object {
         const val HEAD_RAW_BYTES = 4096
+        const val JUNK_MIN_READS = 50
     }
 
     @Volatile private var cancelled = false
@@ -311,14 +312,19 @@ class DiagnosticRunner(
         var total = 0
         var received = 0L
         var reads = 0
-        var dups = 0
         var truncated = false
         var anomalous = false
         var lastTextCheck = 0L
-        var last: ByteArray? = null
         var bannerAt = -1L
         val recent = StringBuilder()
         val sizes = HashMap<Int, Int>()
+        val head = java.io.ByteArrayOutputStream()
+        // Filtro de "pacote constante": se um mesmo pacote domina as leituras, é ruído do chip/pilha USB.
+        val counts = HashMap<Int, Int>()
+        val samples = HashMap<Int, ByteArray>()
+        var junk: ByteArray? = null
+        var junkHash = 0
+        var junkPackets = 0
         val start = clock.now()
         val buf = ByteArray(4096)
         try {
@@ -335,11 +341,10 @@ class DiagnosticRunner(
                         received += n
                         sizes.merge(n, 1, Int::plus)
                         val chunk = buf.copyOf(n)
-                        // Após os primeiros 4 KB, pacotes idênticos ao anterior são só contados (evita inundar o relatório).
-                        val dup = last != null && chunk.contentEquals(last) && total >= HEAD_RAW_BYTES
-                        last = chunk
-                        if (dup) {
-                            dups++
+                        if (head.size() < HEAD_RAW_BYTES) head.write(chunk, 0, minOf(n, HEAD_RAW_BYTES - head.size()))
+                        val h = java.util.Arrays.hashCode(chunk)
+                        if (junk != null && h == junkHash && chunk.contentEquals(junk)) {
+                            junkPackets++
                         } else {
                             val keep = minOf(n, cfg.maxCaptureBytes - total)
                             if (keep > 0) {
@@ -347,6 +352,25 @@ class DiagnosticRunner(
                                 total += keep
                             }
                             if (keep < n) truncated = true
+                            if (junk == null) {
+                                if (counts.size < 64 || counts.containsKey(h)) {
+                                    counts.merge(h, 1, Int::plus)
+                                    samples.putIfAbsent(h, chunk)
+                                }
+                                if (reads >= JUNK_MIN_READS && reads % 10 == 0) {
+                                    val top = counts.maxByOrNull { it.value }
+                                    if (top != null && top.value >= reads * 0.8 && samples[top.key]!!.size >= 8) {
+                                        junkHash = top.key
+                                        junk = samples[top.key]
+                                        // remove retroativamente os pacotes iguais ao ruído já guardados
+                                        val it = chunks.iterator()
+                                        while (it.hasNext()) {
+                                            val c = it.next()
+                                            if (c.bytes.contentEquals(junk)) { it.remove(); total -= c.bytes.size; junkPackets++ }
+                                        }
+                                    }
+                                }
+                            }
                             if (untilBanner) {
                                 recent.append(String(chunk, Charsets.ISO_8859_1))
                                 if (recent.length > 1024) recent.delete(0, recent.length - 1024)
@@ -363,7 +387,7 @@ class DiagnosticRunner(
                     if (!recover(ctx, baud)) throw DisconnectedException()
                 }
                 val now = clock.now() - start
-                if (bannerAt >= 0 && now - bannerAt >= 1500) break
+                if (bannerAt >= 0 && now - bannerAt >= cfg.afterBannerMs) break
                 // Vazão acima do limite físico (+ folga do buffer do chip).
                 if (now >= cfg.anomalyAfterMs && received > 4 * (physicalMaxBps(baud) * now / 1000 + 1024)) {
                     anomalous = true
@@ -378,9 +402,11 @@ class DiagnosticRunner(
         } finally {
             val dur = clock.now() - start
             val sizesText = sizes.entries.sortedByDescending { it.value }.take(3).joinToString(" ") { "${it.key}B×${it.value}" }
-            val cap = SerialCapture(baud, start, dur, chunks, total, truncated, received, reads, anomalous, dups, sizesText)
-            val a0 = SerialAnalyzer.analyze(baud, cap.allBytes())
-            val a = a0.copy(
+            val headRaw = head.toByteArray()
+            val cap = SerialCapture(baud, start, dur, chunks, total, truncated, received, reads, anomalous,
+                junkPackets, sizesText, headRaw, junk?.size ?: 0)
+            val clean = SerialAnalyzer.analyze(baud, cap.allBytes())
+            val a = SerialAnalyzer.withProfile(clean, headRaw).copy(
                 rateBps = if (dur > 0) received * 1000 / dur else 0,
                 physicalMaxBps = physicalMaxBps(baud),
                 anomalous = anomalous
@@ -389,11 +415,13 @@ class DiagnosticRunner(
             ctx.analyses.add(a)
             val inNoise = a.kind != Kind.TEXT && a.strongSignatures.isNotEmpty()
             val status = if (a.kind == Kind.TEXT || inNoise) StepStatus.OK else StepStatus.WARN
+            val junkNote = if (junkPackets > 0) " Filtrados $junkPackets pacotes constantes de ${junk?.size} B (ruído do chip)." else ""
             val rate = "$received B em $dur ms (${a.rateBps} B/s; máximo físico a $baud baud ≈ ${a.physicalMaxBps} B/s; tamanhos de leitura: $sizesText)"
             val detail = when {
-                inNoise -> "ASSINATURA DO ESP32 DENTRO DO FLUXO: " + a.strongSignatures.joinToString("; ") +
-                    (bannerAt.let { if (it >= 0) " (em +${it} ms)" else "" }) + ". $rate."
-                anomalous -> "FLUXO IMPOSSÍVEL: $rate." + (a.period?.let { " Padrão repetido a cada $it bytes." } ?: "")
+                inNoise -> "ASSINATURA DO ESP32 NO FLUXO: " + a.strongSignatures.joinToString("; ") +
+                    (if (bannerAt >= 0) " (em +$bannerAt ms)" else "") + ". $rate.$junkNote"
+                anomalous && a.kind == Kind.TEXT -> "Texto legível (${a.totalBytes} B) + fluxo impossível filtrado: $rate.$junkNote"
+                anomalous -> "FLUXO IMPOSSÍVEL: $rate." + (a.period?.let { " Padrão repetido a cada $it bytes." } ?: "") + junkNote
                 a.kind == Kind.EMPTY -> "Nenhum byte recebido em ${dur / 1000.0}s."
                 a.kind == Kind.TOO_FEW -> "Apenas ${a.totalBytes} byte(s): insuficiente para avaliar."
                 a.kind == Kind.GARBLED -> "${a.totalBytes} bytes, só ${(a.printableRatio * 100).toInt()}% legíveis (provável velocidade errada ou ruído)." +
@@ -407,7 +435,7 @@ class DiagnosticRunner(
                     "rateBps" to a.rateBps.toString(), "physicalMaxBps" to a.physicalMaxBps.toString(),
                     "anomalous" to anomalous.toString(), "period" to (a.period?.toString() ?: ""),
                     "distinct" to a.distinctBytes.toString(), "top" to a.topBytes,
-                    "readSizes" to sizesText, "dupChunks" to dups.toString(),
+                    "readSizes" to sizesText, "junkPackets" to junkPackets.toString(),
                     "strongSignatures" to a.strongSignatures.joinToString("; ")))
         }
     }
@@ -509,7 +537,14 @@ class DiagnosticRunner(
     // ---------------------------------------------------------------- conclusões
 
     private fun buildReport(ctx: Ctx, started: Long): DiagReport {
-        val c = Conclusions.build(ctx.outcome, ctx.devices, ctx.analyses, cfg, ctx.driver, ctx.errorDetail, ctx.chip, ctx.readbacks, ctx.resetPrompted)
+        val got = ctx.analyses.any { it.kind == Kind.TEXT || it.strongSignatures.isNotEmpty() }
+        val firmware = if (got) FirmwareParser.parse(
+            ctx.captures.joinToString("\n") { String(it.allBytes(), Charsets.ISO_8859_1) }
+        ) else null
+        val junkCap = ctx.captures.maxByOrNull { it.dupChunks }?.takeIf { it.dupChunks > 0 }
+        val junkNote = junkCap?.let { "${ctx.captures.sumOf { c -> c.dupChunks }} pacotes constantes de ${it.junkPacketSize} B" }
+        val c = Conclusions.build(ctx.outcome, ctx.devices, ctx.analyses, cfg, ctx.driver, ctx.errorDetail, ctx.chip,
+            ctx.readbacks, ctx.resetPrompted, firmware, junkNote)
         return DiagReport(
             startedAtMs = started,
             finishedAtMs = clock.now(),
@@ -530,7 +565,8 @@ class DiagnosticRunner(
             chip = ctx.chip,
             readbacks = ctx.readbacks.toList(),
             resetPrompted = ctx.resetPrompted,
-            bannerAtMs = ctx.bannerAtMs
+            bannerAtMs = ctx.bannerAtMs,
+            firmware = firmware
         )
     }
 }

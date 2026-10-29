@@ -1,13 +1,13 @@
-# Relatório de testes — v0.3.0 (29/10/2026)
+# Relatório de testes — v0.4.0 (29/10/2026)
 
-> A v0.1.0 foi validada no celular real (ver ANALISE-DIAGNOSTICO-1.md): USB, permissão, abertura, configuração e leitura passiva funcionaram, com 0 bytes escritos. A v0.2.0 também rodou no celular real (leitura de volta do chip e detecção de vazão impossível funcionaram; ver ANALISE-DIAGNOSTICO-2.md). A v0.3.0 adiciona o teste de RESET manual, deduplicação e GET_COMM_STATUS, que **ainda não rodaram em hardware**.
+> A v0.1.0 foi validada no celular real (ver ANALISE-DIAGNOSTICO-1.md): USB, permissão, abertura, configuração e leitura passiva funcionaram, com 0 bytes escritos. A v0.2.0 também rodou no celular real (leitura de volta do chip e detecção de vazão impossível funcionaram; ver ANALISE-DIAGNOSTICO-2.md). A v0.3.0 também rodou no celular real: o teste de RESET manual e o GET_COMM_STATUS funcionaram (ver ANALISE-DIAGNOSTICO-3.md). A v0.4.0 adiciona o filtro de pacote constante e o parser de firmware, **validados só com dados simulados (um log ESP-AT realista derivado do real) — ainda não rodaram no celular**.
 
 ## Executado e aprovado (automatizado)
 | Verificação | Resultado |
 |---|---|
-| Testes unitários JVM (`testDebugUnitTest`) | **42/42** (26 máquina de estados, 10 redação/analisador/log, 6 ZIP/relatório) |
+| Testes unitários JVM (`testDebugUnitTest`) | **46/46** (27 máquina de estados, 3 parser de firmware, 10 redação/analisador/log, 6 ZIP/relatório) |
 | Lint Android (`lintDebug`) | 0 erros, 2 avisos (versão de dependência, `allowBackup`) |
-| Build `assembleDebug` | OK — APK 2,2 MB, SHA-256 `2affd6201c87f71e82da266c62ba7f2dc0a89c028b19768370adb70d75a0bb5c` |
+| Build `assembleDebug` | OK — APK 2,2 MB, SHA-256 no arquivo `.sha256` de `dist/` |
 | Manifesto (aapt2) | minSdk 24, targetSdk 35, permissões: só `ACCESS_NETWORK_STATE` e `INTERNET` |
 
 Cenários simulados (gateway USB falso, relógio simulado): sem dispositivo, sem driver, fallback CP21xx, permissão negada/expirada, abertura com falha (limite de 3 tentativas + backoff), abertura que trava (timeout), dados a 115200, porta muda (varredura passiva, 0 bytes escritos), texto só em outro baud, ruído, queda USB com reconexão, queda com dispositivo ausente, cancelamento, exceção inesperada, limite de tamanho da captura, ordem dos estados.

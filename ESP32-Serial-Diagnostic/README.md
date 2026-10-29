@@ -16,13 +16,14 @@ App Android único para diagnosticar um ESP32 ligado ao celular por USB (ponte *
 5. 115200 8N1, escuta passiva até 8 s (para cedo só com texto legível); se não houver, varredura passiva de 74880 a 2 Mbaud. Lê de volta (GET) o baud aplicado pelo chip e mede a vazão contra o limite físico.
 6. Se não houver texto: pede para você apertar o botão EN/RESET da placa (o app não reseta) e procura o banner de boot no fluxo.
 7. Reconexão limitada (2×) se o USB cair; cancelamento seguro a qualquer momento.
-8. Conclusão com nível de confiança, sem inventar causa raiz; reconhece assinaturas (boot ROM, modo download, brownout, Guru Meditation, EMGP v1).
+8. Filtra pacotes constantes (ruído) e identifica o firmware pelo log de boot (reset, flash, ESP-IDF, partições, indícios de ESP-AT).
+9. Conclusão com nível de confiança, sem inventar causa raiz; reconhece assinaturas (boot ROM, modo download, brownout, Guru Meditation, EMGP v1).
 
 ## ZIP exportado
 `summary.json`, `device.json`, `usb.json`, `serial.txt` (timestamps + hexdump inicial), `wifi.json` (só se rodou), `app-log.txt`, `README.txt`.
 
 ## Instalar
-1. Copie o APK para o celular (`dist/esp32-serial-diagnostic-0.3.0-debug.apk`, SHA-256 em `.sha256`).
+1. Copie o APK para o celular (`dist/esp32-serial-diagnostic-0.4.0-debug.apk`, SHA-256 em `.sha256`).
 2. Permita “instalar apps desconhecidos” para o app que abrir o arquivo.
 3. Abra, conecte o ESP32 com cabo de **dados** (OTG se preciso) e toque **Iniciar diagnóstico**.
 

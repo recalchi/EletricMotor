@@ -75,6 +75,16 @@ object SerialAnalyzer {
             period = period(bytes), distinctBytes = hist.count { it > 0 }, topBytes = top, strongSignatures = strongSigs)
     }
 
+    /** Mantém kind/assinaturas do fluxo limpo, mas perfil (período, distintos, top) do bruto inicial. */
+    fun withProfile(clean: Analysis, headRaw: ByteArray): Analysis {
+        if (headRaw.isEmpty()) return clean
+        val hist = IntArray(256)
+        headRaw.forEach { hist[it.toInt() and 0xFF]++ }
+        val top = hist.withIndex().filter { it.value > 0 }.sortedByDescending { it.value }.take(5)
+            .joinToString(" ") { "%02X×%d".format(it.index, it.value) }
+        return clean.copy(period = period(headRaw), distinctBytes = hist.count { it > 0 }, topBytes = top)
+    }
+
     /** Menor período p (1..256) em que ≥95% dos bytes repetem p posições depois; null se não há. */
     fun period(b: ByteArray): Int? {
         if (b.size < 512) return null

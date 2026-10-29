@@ -86,7 +86,7 @@ class ReportBuilderTest {
         gw.openResults.add { s }
         val r = runner(gw, clock).run()
         val txt = ReportBuilder.serialTxt(r.captures)
-        assertTrue(txt.contains("pacotes idênticos omitidos"))
+        assertTrue(txt.contains("pacotes constantes"))
         assertTrue(txt.contains("VAZÃO ACIMA DO LIMITE FÍSICO"))
         assertTrue(txt.length < 100_000)
         val sum = ReportBuilder.summary(r, device, false)

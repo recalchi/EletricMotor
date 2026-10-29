@@ -92,7 +92,8 @@ object ReportBuilder {
                 put("distinctByteValues", a.distinctBytes)
                 put("topBytes", a.topBytes)
                 put("readSizes", r.captures.getOrNull(i)?.readSizes ?: "")
-                put("duplicatePacketsSkipped", r.captures.getOrNull(i)?.dupChunks ?: 0)
+                put("junkPacketsFiltered", r.captures.getOrNull(i)?.dupChunks ?: 0)
+                put("junkPacketBytes", r.captures.getOrNull(i)?.junkPacketSize ?: 0)
                 put("strongSignatures", JSONArray(a.strongSignatures))
             })
         }
@@ -114,6 +115,16 @@ object ReportBuilder {
             put("chip", r.chip ?: JSONObject.NULL)
             put("chipReadbacks", JSONArray(r.readbacks))
             put("resetPromptedToUser", r.resetPrompted)
+            put("firmware", r.firmware?.let { f ->
+                JSONObject().apply {
+                    put("resetReason", f.resetReason ?: JSONObject.NULL); put("bootMode", f.bootMode ?: JSONObject.NULL)
+                    put("flashSize", f.flashSize ?: JSONObject.NULL); put("flashMode", f.flashMode ?: JSONObject.NULL)
+                    put("flashSpeed", f.flashSpeed ?: JSONObject.NULL); put("idfVersion", f.idfVersion ?: JSONObject.NULL)
+                    put("chipRevision", f.chipRevision ?: JSONObject.NULL); put("moduleName", f.moduleName ?: JSONObject.NULL)
+                    put("partitions", JSONArray(f.partitions)); put("looksLikeEspAt", f.espAt)
+                    put("espAtEvidence", JSONArray(f.evidence))
+                }
+            } ?: JSONObject.NULL)
             put("bootBannerAtMs", if (r.bannerAtMs >= 0) r.bannerAtMs else JSONObject.NULL)
             put("reconnects", r.reconnects)
             put("bytesWrittenToDevice", r.bytesWritten)
@@ -190,7 +201,7 @@ object ReportBuilder {
         sb.append("# Senhas/tokens/e-mails/MAC/IP públicos são redigidos no texto; o hexdump abaixo é dos bytes originais (primeiros $HEXDUMP_BYTES).\n\n")
         if (caps.isEmpty()) sb.append("(nenhuma captura: a porta serial não chegou a ser lida)\n")
         for (c in caps) {
-            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes guardados / ${c.receivedBytes} recebidos em ${c.reads} leituras (tamanhos: ${c.readSizes}; ${c.dupChunks} pacotes idênticos omitidos) | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
+            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes guardados / ${c.receivedBytes} recebidos em ${c.reads} leituras (tamanhos: ${c.readSizes}; ${c.dupChunks} pacotes constantes de ${c.junkPacketSize} B filtrados) | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
             if (c.anomalous) sb.append(" | VAZÃO ACIMA DO LIMITE FÍSICO")
             if (c.truncated) sb.append(" | TRUNCADO")
             sb.append(" ===\n")
