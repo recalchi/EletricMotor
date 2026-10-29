@@ -126,25 +126,41 @@ try {
     Ok 'criptografia e Secure Boot desligados; download UART habilitado'
 
     # --- 4. backup duplo ---------------------------------------------------------
-    Step '4/6 Backup completo (2 leituras)'
+    Step '4/6 Backup completo (16 blocos de 256 KB, cada um conferido pelo chip)'
     $tag = ($mac -replace ':', '')
     $b1 = Join-Path $BackupDir "backup_${tag}_${stamp}.bin"
-    # Leitura longa (4 MB): em 230400+ a ponte CP2102 desta placa cai de forma reprodutível (~0x49000);
-    # 115200 foi estável em todos os testes (≈ 6 min).
-    $done = $false
-    for ($try = 1; $try -le 2 -and -not $done; $try++) {
-        $ErrorActionPreference = 'Continue'
-        # --after no-reset: o chip fica no bootloader, então o firmware não roda (e não altera a NVS) antes da conferência
-        $out = & $esptool --port $Port --baud $BackupBaud --after no-reset read-flash 0 0x400000 $b1 2>&1 | ForEach-Object { "$_" }
-        $code = $LASTEXITCODE
-        $ErrorActionPreference = 'Stop'
-        if ($code -eq 0 -and (Get-Item $b1 -ErrorAction SilentlyContinue).Length -eq $FlashBytes) { $done = $true }
-        else { Write-Host "  aviso: leitura $try falhou ($(($out | Select-Object -Last 1)))" -ForegroundColor Yellow; Start-Sleep 2 }
+    # Leituras longas desta ponte CP2102 caem de forma intermitente (e sempre em 230400+ perto de 0x49000).
+    # Blocos curtos a 115200 + conferência MD5 feita pelo próprio chip + novas tentativas por bloco são confiáveis.
+    $chunk = 0x40000
+    $part = Join-Path $BackupDir "_bloco-$stamp.bin"
+    $all = New-Object IO.MemoryStream
+    for ($off = 0; $off -lt $FlashBytes; $off += $chunk) {
+        $ok = $false
+        # 5 tentativas: sob carga do PC já houve 3 falhas seguidas no mesmo bloco (29/10/2026) — a trava abortou sem gravar
+        for ($try = 1; $try -le 5 -and -not $ok; $try++) {
+            $ErrorActionPreference = 'Continue'
+            # --after no-reset: o chip fica no bootloader até a conferência; o firmware não roda nem altera a NVS no meio
+            $r = & $esptool --port $Port --baud $BackupBaud --after no-reset read-flash ('0x{0:X}' -f $off) ('0x{0:X}' -f $chunk) $part 2>&1 | ForEach-Object { "$_" }
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) {
+                $v = & $esptool --port $Port --baud $BackupBaud --before no-reset verify-flash ('0x{0:X}' -f $off) $part 2>&1 | ForEach-Object { "$_" }
+                $ok = ($LASTEXITCODE -eq 0 -and ($v -join "`n") -match 'Verification successful')
+            }
+            $ErrorActionPreference = 'Stop'
+            if (-not $ok) {
+                Write-Host ("  aviso: bloco 0x{0:X} tentativa {1} falhou ({2})" -f $off, $try, (($r | Select-Object -Last 1))) -ForegroundColor Yellow
+                Start-Sleep 2
+            }
+        }
+        if (-not $ok) { Fail ('bloco 0x{0:X} não pôde ser lido e conferido. Nada foi gravado.' -f $off) }
+        $data = [IO.File]::ReadAllBytes($part)
+        if ($data.Length -ne $chunk) { Fail ('bloco 0x{0:X} com tamanho errado. Nada foi gravado.' -f $off) }
+        $all.Write($data, 0, $data.Length)
+        Write-Host ("  bloco 0x{0:X6} conferido" -f $off)
     }
-    if (-not $done) { Fail 'não foi possível ler a flash para o backup. Nada foi gravado.' }
-    # Confere o backup contra a própria flash: o chip calcula o MD5 de cada bloco (rápido e independente da leitura).
-    $v = Run $esptool @('--port', $Port, '--baud', "$BackupBaud", '--before', 'no-reset', 'verify-flash', '0x0', $b1)
-    if ($v -notmatch 'Verification successful') { Fail "backup não confere com a flash. Nada foi gravado.`n$v" }
+    Remove-Item $part -ErrorAction SilentlyContinue
+    [IO.File]::WriteAllBytes($b1, $all.ToArray())
+    if ((Get-Item $b1).Length -ne $FlashBytes) { Fail 'backup montado com tamanho errado. Nada foi gravado.' }
     $h1 = (Get-FileHash $b1 -Algorithm SHA256).Hash
     Ok "backup conferido com a flash: $b1 (SHA-256 $($h1.ToLower()))"
 
