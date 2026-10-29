@@ -1,6 +1,7 @@
 import type { DeviceProfile, DeviceTransport, TelemetrySample } from '../../domain/types';
 import { capture, reportError, toHex } from '../../app/diagnostics';
 import { BaseAdapter } from '../adapter';
+import { parseFirmwareAnnounce, updateAdvice } from '../firmware';
 import { mapMessage } from '../mapping';
 import { LineBuffer, parseEmgpLine, seqGap, type EmgpMessage } from '../protocol';
 
@@ -71,6 +72,13 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
     if (line.trimStart().startsWith('#')) {
       // comentário/log do firmware — não é telemetria
       this.log('info', line.trim().slice(0, 200));
+      const fw = parseFirmwareAnnounce(line);
+      if (fw) {
+        const advice = updateAdvice(fw);
+        this.st.firmware = fw;
+        this.st.firmwareAdvice = advice;
+        this.log(advice.status === 'desatualizado' ? 'warn' : 'info', advice.message);
+      }
       return;
     }
     const r = parseEmgpLine(line, receivedAt);

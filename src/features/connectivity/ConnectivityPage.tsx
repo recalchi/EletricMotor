@@ -111,6 +111,18 @@ export default function ConnectivityPage() {
                 </div>
                 <p className="mt-1 text-xs text-slate-400">{a.description}</p>
                 {st.message && <p className="mt-1 text-xs text-slate-500">{st.message}</p>}
+                {st.firmware && (
+                  <p
+                    className={cx(
+                      'mt-1 text-xs',
+                      st.firmwareAdvice?.status === 'desatualizado' ? 'text-amber-300' : 'text-slate-400',
+                    )}
+                    data-testid={`firmware-${a.id}`}
+                  >
+                    Firmware {st.firmware.name} v{st.firmware.version}
+                    {st.firmware.dev ? ` · ${st.firmware.dev}` : ''} — {st.firmwareAdvice?.message}
+                  </p>
+                )}
                 {unsupported && <p className="mt-1 text-xs text-amber-300">{unsupported}</p>}
                 {a.id === 'cloud-live' && session?.mode !== 'firebase' && (
                   <p className="mt-1 text-xs text-amber-300">Requer login Firebase.</p>

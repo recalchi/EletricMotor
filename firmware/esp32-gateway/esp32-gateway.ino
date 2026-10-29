@@ -26,7 +26,10 @@
 #include <WiFiClientSecure.h>
 #include "secrets.h"  // copie de secrets.example.h
 
+#define FW_NAME "esp32-gateway"
+#define FW_VERSION "1.0.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
+#define FW_ANNOUNCE_MS 60000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
 #define HTTP_BATCH 10           // mensagens por POST (função aceita até 50; limite 1 req/s)
 
@@ -100,8 +103,15 @@ void publish(const String& line) {
   }
 }
 
+void announceFirmware() {
+  // Linha "#": o app trata como log do firmware, não como telemetria.
+  Serial.printf("# fw name=%s version=%s emgp=1 dev=%s chip_rev=%d sdk=%s\n",
+                FW_NAME, FW_VERSION, DEVICE_ID, (int)ESP.getChipRevision(), ESP.getSdkVersion());
+}
+
 void setup() {
   Serial.begin(115200);
+  announceFirmware();
   sensors.begin();
   setupBle();
   if (wifiEnabled()) {
@@ -113,6 +123,11 @@ void setup() {
 
 void loop() {
   static uint32_t last = 0;
+  static uint32_t lastAnnounce = 0;
+  if (millis() - lastAnnounce >= FW_ANNOUNCE_MS) {
+    lastAnnounce = millis();
+    announceFirmware();
+  }
   if (millis() - last < SAMPLE_MS) return;
   last = millis();
 

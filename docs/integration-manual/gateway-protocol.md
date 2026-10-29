@@ -23,6 +23,18 @@ Uma mensagem JSON por linha (`\n`), no máximo 2048 bytes.
 Linhas iniciadas com `#` são logs do firmware (vão para o log do adaptador). Outras linhas que não são JSON
 válido aparecem no console de teste como erro.
 
+### Anúncio de versão do firmware
+No boot e a cada 60 s o firmware envia uma linha de log no formato `chave=valor`:
+
+```
+# fw name=esp32-gateway version=1.0.0 emgp=1 dev=esp32-hub chip_rev=301 sdk=v5.5.5
+```
+
+`name` e `version` são obrigatórios. O app mostra a versão em **Conectividade → Adaptadores** e compara com o
+catálogo (`src/integrations/firmware.ts`): *atualizado*, *atualização disponível*, *mais novo que o catálogo* ou
+*desconhecido*. O app **só lê** essa linha; a gravação é feita no PC
+(`firmware/esp32-gateway/tools/atualizar-firmware.ps1`).
+
 ## Mapeamento (no app, não no firmware)
 Cada canal é ligado a `componentId` + grandeza + unidade, com calibração `valor = bruto × escala + offset`.
 Valores fora da faixa física plausível (ex.: temperatura < −40 ou > 200 °C) são marcados como inválidos.

@@ -27,3 +27,25 @@ Firmware de exemplo que publica a temperatura de um sensor **externo** no protoc
 2. Cadastre o dispositivo com transporte **Internet**, clique em **Gerar token** e copie-o para `DEVICE_TOKEN`.
 3. Preencha `WIFI_SSID`/`WIFI_PASSWORD`/`INGEST_URL`. O firmware envia lotes de 10 mensagens.
 4. No app, conecte o adaptador **Nuvem (ingestão HTTPS)**.
+
+## Versão e atualização do firmware
+- O firmware anuncia `# fw name=esp32-gateway version=X.Y.Z …` no boot e a cada 60 s; o app EletricMotor mostra a
+  versão e avisa quando há atualização no catálogo (`src/integrations/firmware.ts`).
+- **Atualizar pelo PC (Windows)** com verificações de segurança:
+  ```powershell
+  # só confere tudo e faz backup, sem gravar:
+  .\tools\atualizar-firmware.ps1 -Firmware <esp32-gateway-X.Y.Z-merged.bin> -Sha256 <hash do catálogo> -DryRun
+  # grava de verdade:
+  .\tools\atualizar-firmware.ps1 -Firmware <esp32-gateway-X.Y.Z-merged.bin> -Sha256 <hash do catálogo>
+  # voltar ao estado anterior:
+  .\tools\atualizar-firmware.ps1 -Restaurar <backup_*.bin>
+  ```
+  O script: identifica a placa (ESP32 + flash de 4 MB), confere nos eFuses que criptografia de flash e Secure Boot
+  estão desligados, faz backup completo conferido contra a própria flash, grava com verificação por hash e só
+  conclui se o firmware anunciar `# fw …` sem sinal de pane. Qualquer falha aborta antes de gravar.
+- Requer o driver **Silicon Labs CP210x** (Windows Update o oferece para `USB\VID_10C4&PID_EA60`) e esptool ≥ 5
+  (vem com o core esp32 do Arduino).
+- Ao publicar nova versão: suba `FW_VERSION` no `.ino`, compile, gere o binário completo (merged) e acrescente a
+  versão com o SHA-256 em `FIRMWARE_CATALOG`.
+- Observação de hardware: nesta placa (CP2102), leituras longas da flash acima de 115200 baud caíram de forma
+  reprodutível; por isso o backup usa 115200 (≈ 6 min). A gravação a 460800 funcionou e é conferida por hash.

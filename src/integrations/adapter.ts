@@ -1,5 +1,6 @@
 import type { TelemetrySample } from '../domain/types';
 import { capture, reportError } from '../app/diagnostics';
+import type { FirmwareAnnounce, UpdateAdvice } from './firmware';
 
 export type AdapterState = 'desconectado' | 'conectando' | 'conectado' | 'erro' | 'nao_implementado';
 
@@ -9,6 +10,9 @@ export interface AdapterStatus {
   lastSampleAt: number | null;
   samplesReceived: number;
   version: string;
+  /** Firmware anunciado pelo gateway (linha "# fw ..."), quando houver. */
+  firmware?: FirmwareAnnounce;
+  firmwareAdvice?: UpdateAdvice;
 }
 
 export interface AdapterLogEntry {
