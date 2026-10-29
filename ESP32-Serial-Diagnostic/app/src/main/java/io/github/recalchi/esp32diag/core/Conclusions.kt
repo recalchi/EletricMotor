@@ -19,7 +19,9 @@ object Conclusions {
         analyses: List<Analysis>,
         cfg: DiagConfig,
         driver: String?,
-        errorDetail: String?
+        errorDetail: String?,
+        chip: String? = null,
+        readbacks: List<String> = emptyList()
     ): Result = when (outcome) {
         Outcome.NO_DEVICE -> Result(
             "O Android não enxergou nenhum dispositivo USB.",
@@ -97,6 +99,38 @@ object Conclusions {
                 SEND_HINT
             )
         )
+        Outcome.SERIAL_RATE_ANOMALY -> {
+            val a = analyses.first { it.anomalous }
+            val applied = readbacks.any { r ->
+                val req = Regex("pedido=(\\d+)").find(r)?.groupValues?.get(1)?.toLongOrNull()
+                val got = Regex("baud lido=(\\d+)").find(r)?.groupValues?.get(1)?.toLongOrNull()
+                req != null && got != null && req == got
+            }
+            val concl = mutableListOf(
+                "A ponte USB entregou ${a.rateBps} B/s a ${a.baud} baud, mas uma UART só consegue ≈ ${a.physicalMaxBps} B/s nessa velocidade. " +
+                    "Logo o fluxo NÃO é texto serial normal nessa configuração.",
+                "Isso se repetiu em ${analyses.count { it.anomalous }} de ${analyses.size} velocidades testadas" +
+                    (if (analyses.all { it.anomalous }) " (a velocidade configurada parece não surtir efeito)." else "."),
+                a.period?.let { "O conteúdo é um padrão que se repete a cada $it bytes (${a.distinctBytes} valores distintos) — típico de sinal periódico/ruído, não de log de texto." }
+                    ?: "Conteúdo sem texto legível (${a.distinctBytes} valores distintos).",
+                if (chip != null) "Chip identificado: $chip." else "Modelo exato do chip não pôde ser lido.",
+                if (readbacks.isEmpty()) "Não foi possível ler de volta do chip o baud aplicado."
+                else if (applied) "O chip confirmou o baud pedido, então o excesso de dados vem da linha RX (ruído/sinal rápido), não de baud ignorado."
+                else "A leitura de volta do chip NÃO confirmou o baud pedido: ${readbacks.first()}",
+                "Causa raiz não determinada: pode ser TX do ESP32 emitindo fluxo rápido contínuo (ex.: protocolo binário de alta velocidade), linha RX flutuando/em curto, ou chip/clone com comportamento atípico."
+            )
+            Result(
+                "O fluxo recebido é rápido demais para ser serial de texto: algo está errado na linha ou no baud.",
+                Confidence.MEDIA,
+                concl,
+                listOf(
+                    "Envie o ZIP: serial.txt e summary.json agora trazem vazão, período do padrão e leitura de volta do chip.",
+                    "Para separar 'placa' de 'celular': plugue a MESMA placa no PC e abra um monitor serial a 115200 (ex.: Arduino IDE) — se mostrar texto normal, o problema está no celular/cabo/app; se mostrar o mesmo lixo, está na placa/firmware.",
+                    "Se puder, teste outro cabo e outra porta; evite hubs.",
+                    SEND_HINT
+                )
+            )
+        }
         Outcome.SERIAL_GARBLED -> Result(
             "Chegaram bytes, mas ilegíveis em todas as velocidades testadas.",
             Confidence.MEDIA,

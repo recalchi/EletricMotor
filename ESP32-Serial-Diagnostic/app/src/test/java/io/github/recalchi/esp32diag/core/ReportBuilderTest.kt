@@ -16,7 +16,7 @@ class ReportBuilderTest {
     private fun report(script: (Int, Int) -> ByteArray?): DiagReport {
         val clock = FakeClock()
         val gw = FakeGateway(clock).apply { permitted = true }
-        gw.openResults.add { FakeSession(clock, script) }
+        gw.openResults.add { FakeSession(clock, script = script) }
         return runner(gw, clock).run()
     }
 
@@ -76,5 +76,24 @@ class ReportBuilderTest {
         val zip = unzip(ReportBuilder.zip(ReportBuilder.files(r, device, "", null), 0))
         assertTrue(String(zip["serial.txt"]!!).contains("nenhuma captura"))
         assertEquals("NO_DEVICE", JSONObject(String(zip["summary.json"]!!)).getString("outcome"))
+    }
+
+    @Test fun repeatedLinesAreCollapsedAndRateEvidenceIsInSummary() {
+        val clock = FakeClock()
+        val gw = FakeGateway(clock).apply { permitted = true }
+        val s = FakeSession(clock, costMs = 1) { _, _ -> PERIODIC_FLOOD }
+        s.readback = { b -> ChipReadback(0x02, b.toLong(), 0x0800, 0) }
+        gw.openResults.add { s }
+        val r = runner(gw, clock).run()
+        val txt = ReportBuilder.serialTxt(r.captures)
+        assertTrue(txt.contains("repetida mais"))
+        assertTrue(txt.contains("VAZÃO ACIMA DO LIMITE FÍSICO"))
+        assertTrue(txt.length < 100_000)
+        val sum = ReportBuilder.summary(r, device, false)
+        assertEquals("CP2102", sum.getString("chip"))
+        val c0 = sum.getJSONArray("captures").getJSONObject(0)
+        assertTrue(c0.getBoolean("rateAnomaly"))
+        assertEquals(33, c0.getInt("repeatPeriodBytes"))
+        assertTrue(sum.getJSONArray("chipReadbacks").length() >= 2)
     }
 }

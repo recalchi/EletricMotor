@@ -57,4 +57,17 @@ class RedactorAnalyzerTest {
         assertFalse(d.contains("abc9"))
         assertEquals(3, d.lines().count { it.contains(" I t: ") })
     }
+
+    @Test fun detectsRepeatingPatternPeriod() {
+        assertEquals(33, SerialAnalyzer.period(PERIODIC_FLOOD))
+        val noise = java.util.Random(1).let { r -> ByteArray(2000) { r.nextInt(256).toByte() } }
+        assertEquals(null, SerialAnalyzer.period(noise))
+        assertEquals(null, SerialAnalyzer.period(ByteArray(100)))
+    }
+
+    @Test fun analyzerReportsByteDistribution() {
+        val a = SerialAnalyzer.analyze(115200, PERIODIC_FLOOD)
+        assertTrue(a.distinctBytes in 2..33)
+        assertTrue(a.topBytes.contains("×"))
+    }
 }

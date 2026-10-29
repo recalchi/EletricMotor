@@ -19,6 +19,7 @@ enum class Outcome(val label: String) {
     SERIAL_DATA_OK("Dados de texto recebidos do ESP32"),
     SERIAL_SILENT("Porta aberta, mas nenhum byte recebido"),
     SERIAL_GARBLED("Bytes recebidos, mas ilegíveis em todas as velocidades testadas"),
+    SERIAL_RATE_ANOMALY("Fluxo de bytes mais rápido do que a velocidade configurada permite"),
     NO_DEVICE("Nenhum dispositivo USB detectado"),
     DRIVER_UNSUPPORTED("Dispositivo USB sem driver serial compatível"),
     PERMISSION_DENIED("Permissão USB negada"),
@@ -66,7 +67,10 @@ class SerialCapture(
     val durationMs: Long,
     val chunks: List<SerialChunk>,
     val totalBytes: Int,
-    val truncated: Boolean
+    val truncated: Boolean,
+    val receivedBytes: Long = totalBytes.toLong(),
+    val reads: Int = 0,
+    val anomalous: Boolean = false
 ) {
     fun allBytes(): ByteArray {
         val out = java.io.ByteArrayOutputStream()
@@ -106,5 +110,7 @@ class DiagReport(
     val reconnects: Int,
     val captures: List<SerialCapture>,
     val analyses: List<Analysis>,
+    val chip: String? = null,
+    val readbacks: List<String> = emptyList(),
     val bytesWritten: Int = 0
 )

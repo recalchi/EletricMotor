@@ -9,7 +9,13 @@ data class Analysis(
     val lineCount: Int,
     val kind: Kind,
     val signatures: List<String>,
-    val preview: String
+    val preview: String,
+    val period: Int? = null,
+    val distinctBytes: Int = 0,
+    val topBytes: String = "",
+    val rateBps: Long = 0,
+    val physicalMaxBps: Long = 0,
+    val anomalous: Boolean = false
 )
 
 object SerialAnalyzer {
@@ -52,6 +58,25 @@ object SerialAnalyzer {
                 }
             }.joinToString("")
         )
-        return Analysis(baud, bytes.size, ratio, lines, kind, sigs, preview)
+        val hist = IntArray(256)
+        bytes.forEach { hist[it.toInt() and 0xFF]++ }
+        val top = hist.withIndex().filter { it.value > 0 }.sortedByDescending { it.value }.take(5)
+            .joinToString(" ") { "%02X×%d".format(it.index, it.value) }
+        return Analysis(baud, bytes.size, ratio, lines, kind, sigs, preview,
+            period = period(bytes), distinctBytes = hist.count { it > 0 }, topBytes = top)
+    }
+
+    /** Menor período p (1..256) em que ≥95% dos bytes repetem p posições depois; null se não há. */
+    fun period(b: ByteArray): Int? {
+        if (b.size < 512) return null
+        val start = 64
+        for (p in 1..256) {
+            val n = minOf(b.size, 2048) - start - p
+            if (n < 128) return null
+            var eq = 0
+            for (i in start until start + n) if (b[i] == b[i + p]) eq++
+            if (eq >= n * 0.95) return p
+        }
+        return null
     }
 }

@@ -83,6 +83,14 @@ object ReportBuilder {
                 put("signatures", JSONArray(a.signatures))
                 put("truncated", r.captures.getOrNull(i)?.truncated ?: false)
                 put("durationMs", r.captures.getOrNull(i)?.durationMs ?: 0)
+                put("receivedBytes", r.captures.getOrNull(i)?.receivedBytes ?: 0)
+                put("reads", r.captures.getOrNull(i)?.reads ?: 0)
+                put("rateBytesPerSec", a.rateBps)
+                put("physicalMaxBytesPerSec", a.physicalMaxBps)
+                put("rateAnomaly", a.anomalous)
+                put("repeatPeriodBytes", a.period ?: JSONObject.NULL)
+                put("distinctByteValues", a.distinctBytes)
+                put("topBytes", a.topBytes)
             })
         }
         return JSONObject().apply {
@@ -100,6 +108,8 @@ object ReportBuilder {
             put("driver", r.driver ?: JSONObject.NULL)
             put("permission", r.permissionState)
             put("controlLinesReadOnly", r.controlLines ?: JSONObject.NULL)
+            put("chip", r.chip ?: JSONObject.NULL)
+            put("chipReadbacks", JSONArray(r.readbacks))
             put("reconnects", r.reconnects)
             put("bytesWrittenToDevice", r.bytesWritten)
             put("wifiModuleIncluded", wifiIncluded)
@@ -147,6 +157,8 @@ object ReportBuilder {
         put("driver", r.driver ?: JSONObject.NULL)
         put("permission", r.permissionState)
         put("controlLinesReadOnly", r.controlLines ?: JSONObject.NULL)
+        put("chip", r.chip ?: JSONObject.NULL)
+        put("chipReadbacks", JSONArray(r.readbacks))
         put("reconnects", r.reconnects)
         put("errors", JSONArray(r.steps.filter { it.status.name == "FAIL" }.map { Redactor.text("${it.id}: ${it.detail}") }))
     }
@@ -173,23 +185,37 @@ object ReportBuilder {
         sb.append("# Senhas/tokens/e-mails/MAC/IP públicos são redigidos no texto; o hexdump abaixo é dos bytes originais (primeiros $HEXDUMP_BYTES).\n\n")
         if (caps.isEmpty()) sb.append("(nenhuma captura: a porta serial não chegou a ser lida)\n")
         for (c in caps) {
-            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
+            sb.append("=== ${c.baud} baud | ${c.totalBytes} bytes guardados / ${c.receivedBytes} recebidos em ${c.reads} leituras | ${c.durationMs} ms | início ${iso(c.startedAtMs)}")
+            if (c.anomalous) sb.append(" | VAZÃO ACIMA DO LIMITE FÍSICO")
             if (c.truncated) sb.append(" | TRUNCADO")
             sb.append(" ===\n")
             if (c.chunks.isEmpty()) sb.append("(sem dados)\n")
+            var last: String? = null
+            var repeats = 0
+            fun flushRepeats() {
+                if (repeats > 0) sb.append("    … linha acima repetida mais $repeats vez(es)\n")
+                repeats = 0
+            }
             for (ch in c.chunks) {
                 val text = String(ch.bytes, Charsets.UTF_8)
                     .map { ch2 -> if (ch2 == '\n' || ch2 == '\r' || ch2 == '\t' || ch2.code >= 0x20) ch2 else '·' }
                     .joinToString("")
                 val ts = "[+%.3fs] ".format(Locale.US, ch.offsetMs / 1000.0)
                 Redactor.text(text).replace("\r\n", "\n").replace('\r', '\n').trimEnd('\n').split('\n').forEach {
-                    sb.append(ts).append(it).append('\n')
+                    if (it == last) {
+                        repeats++
+                    } else {
+                        flushRepeats()
+                        sb.append(ts).append(it).append('\n')
+                        last = it
+                    }
                 }
                 if (sb.length > MAX_SERIAL_TXT) {
                     sb.append("\n[serial.txt truncado em $MAX_SERIAL_TXT caracteres]\n")
                     return sb.toString()
                 }
             }
+            flushRepeats()
             val head = c.allBytes().take(HEXDUMP_BYTES)
             if (head.isNotEmpty()) {
                 sb.append("--- hexdump (primeiros ${head.size} bytes) ---\n")
