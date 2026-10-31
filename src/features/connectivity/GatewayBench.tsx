@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { live } from '../../app/liveLog';
 import { Link } from 'react-router-dom';
 import { useBench } from '../../app/benchStore';
 import { useApp } from '../../app/store';
@@ -61,6 +62,8 @@ export function GatewayBench() {
   const done = checks.filter((c) => c.status === 'ok').length;
   const counted = checks.filter((c) => c.status !== 'opcional').length;
   const next = nextStep(checks);
+  const sig = checks.map((c) => `${c.id}:${c.status}`).join(',');
+  useEffect(() => logCheckChanges(checks), [sig]); // eslint-disable-line react-hooks/exhaustive-deps
   const usbOn = ['conectado', 'conectando'].includes(serial.status().state);
   const bleOn = ['conectado', 'conectando'].includes(bleNus.status().state);
 
@@ -75,6 +78,14 @@ export function GatewayBench() {
       setBusy(null);
     }
   };
+
+  // ?auto=usb (atalho do PC): reconecta sozinho à porta já autorizada, sem precisar tocar em Conectar USB
+  useEffect(() => {
+    if (autoTried || new URLSearchParams(location.search).get('auto') !== 'usb' || usbOn) return;
+    autoTried = true;
+    live('acao', 'conexão USB automática (?auto=usb)');
+    void act('usb', () => serial.connect({ grantedOnly: true }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card
@@ -184,4 +195,16 @@ export function GatewayBench() {
       </div>
     </Card>
   );
+}
+
+let autoTried = false;
+const lastStatus = new Map<string, CheckStatus>();
+/** Canal ao vivo (PC): registra só as verificações que mudaram de estado. */
+function logCheckChanges(checks: BenchCheck[]) {
+  const first = lastStatus.size === 0;
+  for (const c of checks) {
+    if (lastStatus.get(c.id) === c.status) continue;
+    if (!first) live('check', `${c.status === 'ok' ? '✓' : '·'} ${c.label}: ${c.status} — ${c.detail}`);
+    lastStatus.set(c.id, c.status);
+  }
 }

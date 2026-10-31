@@ -15,6 +15,7 @@ import {
 } from '../../integrations/flasher';
 import { exportFile, saveBinaryFile, saveTextFile } from '../../platform/files';
 import { isNative } from '../../platform/native';
+import { live } from '../../app/liveLog';
 import { flashSupported, requestFlashPort } from '../../platform/serial';
 import { Bar, Button, Card, Field, PageHeader, cx } from '../../shared/ui';
 import { Icon } from '../../shared/ui/icons';
@@ -189,7 +190,7 @@ export default function FirmwarePage() {
     const final = await runFirmwareUpdate(
       target,
       { mode, backup, baudrate: baud, fromVersion: current?.name === target.name ? current.version : undefined },
-      { port, loadFile, sha256, saveBackup: saveBinaryFile, onChange: setRun },
+      { port, loadFile, sha256, saveBackup: saveBinaryFile, onChange: (r) => (liveFlash(r), setRun(r)) },
     );
     setHistory(saveToHistory(final));
   };
@@ -366,4 +367,13 @@ export default function FirmwarePage() {
       {run && <ProgressOverlay run={run} onClose={() => setRun(null)} />}
     </div>
   );
+}
+
+let flashSent = { id: '', lines: 0 };
+/** Canal ao vivo (PC): repassa as linhas novas do log da gravação. */
+function liveFlash(r: FlashRun) {
+  if (flashSent.id !== r.id) flashSent = { id: r.id, lines: 0 };
+  r.log.slice(flashSent.lines).forEach((l) => live('flash', l));
+  flashSent.lines = r.log.length;
+  if (r.result !== 'executando') live('flash', `resultado: ${r.result}${r.error ? ` — ${r.error}` : ''}`);
 }

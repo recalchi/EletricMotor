@@ -1,9 +1,10 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { liveLogPlugin } from './tools/liveLogPlugin';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), liveLogPlugin()],
   server: { port: 5173 },
   build: {
     chunkSizeWarningLimit: 1500,
@@ -19,6 +20,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
   },
 });

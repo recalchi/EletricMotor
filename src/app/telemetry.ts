@@ -12,6 +12,7 @@ import { SimulatorAdapter } from '../integrations/simulator/SimulatorAdapter';
 import type { TelemetryAdapter } from '../integrations/adapter';
 import { attachBench } from './benchStore';
 import { sampleKey, useApp } from './store';
+import { live } from './liveLog';
 
 const VEHICLE = 'evs-1';
 /** Cadastro de dispositivos consultado de forma síncrona pelos adaptadores físicos. */
@@ -35,7 +36,11 @@ export function wireAdapters() {
   const st = useApp.getState();
   for (const a of ADAPTERS) {
     a.subscribe((s) => useApp.getState().ingest(s));
-    a.onLog((e) => st.pushLog(a.name, e));
+    a.onLog((e) => {
+      st.pushLog(a.name, e);
+      // linhas "#" da placa já vão como 'placa' pela bateria de testes
+      if (!e.message.startsWith('#')) live('log', { src: a.id, level: e.level, msg: e.message });
+    });
   }
   simulator.onEvent((e) => useApp.getState().pushSimEvent(e));
   for (const h of HARDWARE) h.onTest((e) => useApp.getState().pushTest(e));

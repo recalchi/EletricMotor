@@ -2,7 +2,9 @@
 # - Recompila sozinho quando algo em src/, public/, index.html ou .env.local mudou depois do último build.
 # - Reaproveita o servidor se ele já estiver rodando. Para parar: scripts/pc/abrir-eletricmotor.ps1 -Parar
 # localhost é contexto seguro: USB (Web Serial), Bluetooth (Web Bluetooth) e login Google funcionam.
-param([switch]$Parar)
+# -SemJanela: só garante build + servidor (usado para testes automatizados e pelo canal ao vivo)
+# -Usb: abre direto no assistente do gateway e conecta sozinho à porta USB já autorizada no Chrome
+param([switch]$Parar, [switch]$SemJanela, [switch]$Usb)
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $port = 4173
@@ -46,6 +48,8 @@ if (-not (Test-Up)) {
   if (-not (Test-Up)) { Read-Host 'O servidor não respondeu na porta 4173. Enter para sair'; exit 1 }
 }
 
+if ($Usb) { $url += 'conectividade?auto=usb' }
+if ($SemJanela) { Write-Host "Servidor pronto em $url"; exit 0 }
 $browsers = @(
   "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
   "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",

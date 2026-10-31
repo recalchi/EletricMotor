@@ -22,7 +22,7 @@ export class SerialAdapter extends DeviceStreamAdapter {
     return serialSupported();
   }
 
-  async connect() {
+  async connect(opts: { grantedOnly?: boolean } = {}) {
     if (!serialSupported()) {
       this.setState('erro', 'USB serial indisponível — no computador use Chrome/Edge; no celular use o APK');
       this.log('error', this.st.message);
@@ -30,7 +30,7 @@ export class SerialAdapter extends DeviceStreamAdapter {
     }
     try {
       this.setState('conectando', isNative() ? 'Autorize o acesso ao dispositivo USB…' : 'Selecione a porta…');
-      this.link = await openSerial(this.baudRate);
+      this.link = await openSerial(this.baudRate, opts);
       this.link.onData((b) => this.feedBytes(b));
       this.link.onError((e) => {
         this.setState('erro', `Conexão serial interrompida: ${e.message}`);

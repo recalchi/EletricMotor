@@ -67,10 +67,14 @@ const dec = new TextDecoder();
 let buf = '';
 let lastHint = '';
 const end = seconds > 0 ? Date.now() + seconds * 1000 : Infinity;
+// a leitura pendente sobrevive ao tempo limite: descartá-la perderia o pedaço que ela trouxer
+let pending: ReturnType<typeof reader.read> | null = null;
 while (Date.now() < end) {
+  pending ??= reader.read();
   const timer = new Promise<'t'>((res) => setTimeout(() => res('t'), 1000));
-  const r = await Promise.race([reader.read(), timer]);
+  const r = await Promise.race([pending, timer]);
   if (r !== 't') {
+    pending = null;
     if (r.done) break;
     buf += dec.decode(r.value, { stream: true });
     const parts = buf.split(/\r?\n/);

@@ -45,6 +45,16 @@ Firmware ≥ 1.1.0 publica sempre, mesmo sem sensor, os canais de bancada:
 
 No app: Conectividade → **Assistente do gateway ESP32** mostra cada verificação, o próximo passo e exporta o relatório.
 
+## Acompanhamento ao vivo (versão de PC)
+A porta USB só aceita um programa por vez. Para acompanhar um teste sem disputar a porta com o app:
+- abra o app pelo atalho **EletricMotor (bancada USB)** (`scripts/pc/EletricMotor-PC.cmd -Usb`): vai direto ao
+  assistente e conecta sozinho à porta já autorizada no Chrome (`/conectividade?auto=usb`);
+- tudo o que o assistente vê (mensagens, linhas `#` da placa, verificações que mudam, erros, log da gravação de
+  firmware) é gravado em `hw-logs/app-live-AAAAMMDD.log` pelo servidor local (`tools/liveLogPlugin.ts`);
+- leia ao vivo com `curl -s "http://localhost:4173/__live/log?tail=50"` (só aceita o próprio PC; nada sai da máquina).
+- Sem o app aberto, `npm run hw:monitor -- --port COM7` escuta a placa direto, com a mesma lógica.
+- Abrir a porta pelo Chrome reinicia a placa (DTR/RTS): isso derruba uma conexão Bluetooth ativa no celular.
+
 ## Camada 4 — roteiro manual
 1. Login demo → Central mostra KPIs **INDISPONÍVEL** (sem números).
 2. Laboratório → Iniciar → faixa **MODO SIMULAÇÃO** visível nas telas com dados.

@@ -10,6 +10,7 @@
  * Privacidade: nada sai do aparelho automaticamente; a exportação é manual.
  */
 import { create } from 'zustand';
+import { live } from './liveLog';
 
 export const APP_VERSION = '0.6.1';
 
@@ -80,6 +81,7 @@ export function reportError(
     /* sem armazenamento: mantém em memória */
   }
   if (useDiag.getState().capturing) capture({ src: source, kind: 'erro', data: entry.message, meta: context });
+  live('erro', { src: source, level, msg: entry.message });
 }
 
 export function clearErrors() {

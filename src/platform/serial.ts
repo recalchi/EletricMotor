@@ -18,16 +18,28 @@ export function serialSupported(): boolean {
   return typeof navigator !== 'undefined' && 'serial' in navigator;
 }
 
-export async function openSerial(baudRate: number): Promise<SerialLink> {
-  return isNative() ? openNative(baudRate) : openWeb(baudRate);
+/** grantedOnly: só reconecta a uma porta já autorizada (sem seletor) — usado na conexão automática ao abrir. */
+export async function openSerial(baudRate: number, opts: { grantedOnly?: boolean } = {}): Promise<SerialLink> {
+  return isNative() ? openNative(baudRate) : openWeb(baudRate, opts.grantedOnly);
 }
 
 // ───────────────────────── Navegador
 
-async function openWeb(baudRate: number): Promise<SerialLink> {
+async function openWeb(baudRate: number, grantedOnly = false): Promise<SerialLink> {
   if (!navigator.serial) throw new Error('Web Serial indisponível — use Chrome ou Edge no computador');
-  const port = await navigator.serial.requestPort();
-  await port.open({ baudRate });
+  // Porta já autorizada antes (uma só): reconecta sem abrir o seletor
+  const granted = (await navigator.serial.getPorts?.()) ?? [];
+  if (grantedOnly && granted.length !== 1)
+    throw new Error('Conexão automática: nenhuma porta USB autorizada ainda — toque em Conectar USB uma vez');
+  const port = granted.length === 1 ? granted[0] : await navigator.serial.requestPort();
+  try {
+    await port.open({ baudRate });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/already open|Failed to open|Access denied/i.test(msg))
+      throw new Error('Porta USB em uso por outro programa ou aba — feche-o (ou desconecte nele) e tente de novo');
+    throw e;
+  }
   const info = port.getInfo();
   const dataCbs: ((b: Uint8Array) => void)[] = [];
   const errCbs: ((e: Error) => void)[] = [];
