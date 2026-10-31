@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -42,5 +43,12 @@
     <!-- USB OTG (gateway serial) — opcional: o app funciona em aparelhos sem USB host -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <!-- Bluetooth LE — opcional; permissões declaradas pelo plugin @capacitor-community/bluetooth-le -->
+    <!-- O app chama BleClient.initialize({ androidNeverForLocation: true }), que no Android 12+ pede só
+         BLUETOOTH_SCAN/CONNECT. Sem declarar neverForLocation aqui, o Android trata a busca como localização e,
+         sem essa permissão, entrega a lista vazia ("Procurando dispositivos…" para sempre). -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 </manifest>

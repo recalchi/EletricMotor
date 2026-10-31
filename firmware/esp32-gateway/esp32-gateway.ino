@@ -28,9 +28,9 @@
 #include "secrets.h"  // copie de secrets.example.h
 
 #define FW_NAME "esp32-gateway"
-#define FW_VERSION "1.1.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
+#define FW_VERSION "1.2.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
-#define FW_ANNOUNCE_MS 60000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
+#define FW_ANNOUNCE_MS 10000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
 #define HTTP_BATCH 10           // mensagens por POST (função aceita até 50; limite 1 req/s)
 
@@ -50,12 +50,17 @@ OneWire oneWire(ONE_WIRE_PIN);
 DallasTemperature sensors(&oneWire);
 NimBLECharacteristic* txChar = nullptr;
 bool bleClient = false;
+uint16_t blePayload = 20;  // MTU negociado − 3; começa no mínimo do BLE (MTU 23)
 uint32_t seq = 0;
 String httpBuffer;
 int httpCount = 0;
 
 class ServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer*, NimBLEConnInfo&) override { bleClient = true; }
+  void onConnect(NimBLEServer*, NimBLEConnInfo&) override {
+    bleClient = true;
+    blePayload = 20;
+  }
+  void onMTUChange(uint16_t mtu, NimBLEConnInfo&) override { blePayload = mtu > 23 ? mtu - 3 : 20; }
   void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
     bleClient = false;
     NimBLEDevice::startAdvertising();
@@ -106,9 +111,10 @@ void publish(const String& line) {
   Serial.println(line);
   if (bleClient && txChar) {
     String withNl = line + "\n";
-    // NUS entrega em pedaços; o app remonta as linhas
-    for (size_t i = 0; i < withNl.length(); i += 180) {
-      String part = withNl.substring(i, i + 180);
+    // NUS entrega em pedaços do tamanho do MTU negociado (pedaço maior seria truncado); o app remonta as linhas
+    size_t chunk = blePayload > 180 ? 180 : blePayload;
+    for (size_t i = 0; i < withNl.length(); i += chunk) {
+      String part = withNl.substring(i, i + chunk);
       txChar->setValue((uint8_t*)part.c_str(), part.length());
       txChar->notify();
       delay(5);
@@ -166,6 +172,6 @@ void loop() {
   String line = String("{\"v\":1,\"dev\":\"") + DEVICE_ID + "\",\"seq\":" + String(seq++) + ts + ",\"ch\":{" + ch +
                 "},\"st\":{\"rssi\":" + String(WiFi.RSSI()) + ",\"up\":" + String(millis() / 1000) +
                 ",\"heap\":" + String(ESP.getFreeHeap() / 1024) + ",\"ble\":" + String(bleClient ? 1 : 0) +
-                ",\"ds\":\"" + (hasTemp ? "ok" : "ausente") + "\"}}";
+                ",\"ds\":\"" + (hasTemp ? "ok" : "ausente") + "\",\"fw\":\"" + FW_VERSION + "\"}}";
   publish(line);
 }

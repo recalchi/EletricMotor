@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "pc": "powershell -ExecutionPolicy Bypass -File scripts/pc/abrir-eletricmotor.ps1",
     "apk": "powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1",
     "cap:sync": "cap sync android",
     "scans:pull": "node scripts/pull-scans.mjs",

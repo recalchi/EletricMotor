@@ -44,6 +44,49 @@ export interface FirmwareRelease {
 export const FIRMWARE_CATALOG: FirmwareRelease[] = [
   {
     name: 'esp32-gateway',
+    version: '1.2.0',
+    sha256: '0d740dcacb6a1f37b55535f89b30054b2225016ff30f35bfe23d48d5ab158a21',
+    date: '2026-10-31',
+    notes:
+      'Versão do firmware em toda mensagem (st.fw) — o app identifica na hora, também por Bluetooth — e reanúncio a ' +
+      'cada 10 s. Envio Bluetooth em pedaços do tamanho do MTU negociado (antes 180 bytes fixos podiam ser truncados).',
+    path: 'firmware/esp32-gateway/1.2.0',
+    artifacts: [
+      {
+        role: 'bootloader',
+        file: 'bootloader.bin',
+        address: 0x1000,
+        size: 24992,
+        sha256: '47bbbfca119fe87190f63a67af9d85adff6433bcf3812ec92a9b9c9416a53ad1',
+        md5: '68acc136fae0daa0e5605d8b014254a4',
+      },
+      {
+        role: 'particoes',
+        file: 'partitions.bin',
+        address: 0x8000,
+        size: 3072,
+        sha256: '148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1',
+        md5: 'a039c66cd3488176037b616b7595fe72',
+      },
+      {
+        role: 'otadata',
+        file: 'boot_app0.bin',
+        address: 0xe000,
+        size: 8192,
+        sha256: 'f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0',
+        md5: 'e6327541e2dc394ca2c3b3280ac0f39f',
+      },
+      {
+        role: 'app',
+        file: 'app.bin',
+        address: 0x10000,
+        size: 696784,
+        sha256: '69177f3fecdc2d24dac0de4fa965cdf014096df5c5c784f338383d2e867b6046',
+        md5: 'c0216f3948c6e8822012226b8ad106c2',
+      },
+    ],
+  },  {
+    name: 'esp32-gateway',
     version: '1.1.0',
     sha256: '7b5376925e938fa17a0ab0646529d035c1c983bc222838244a4d28b8f90d2c09',
     date: '2026-10-30',

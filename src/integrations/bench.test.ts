@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { benchChecks, benchLog, benchMessage, emptyBench, gatewayDevice, nextStep, type BenchState } from './bench';
-import { parseFirmwareAnnounce, updateAdvice } from './firmware';
+import { latestRelease, parseFirmwareAnnounce, updateAdvice } from './firmware';
 import { SerialAdapter } from './hardware/SerialAdapter';
 import { parseEmgpLine } from './protocol';
 
@@ -57,9 +57,17 @@ describe('bateria de testes do gateway', () => {
     const old = parseFirmwareAnnounce('# fw name=esp32-gateway version=1.0.0 emgp=1 dev=esp32-hub')!;
     let s = benchLog(emptyBench(), '# fw …', old, updateAdvice(old));
     expect(status(s, 'firmware')).toBe('pendente');
-    const cur = { ...old, version: '1.1.0' };
+    const cur = { ...old, version: latestRelease('esp32-gateway')!.version };
     s = benchLog(s, '# fw …', cur, updateAdvice(cur));
     expect(status(s, 'firmware')).toBe('ok');
+  });
+
+  it('firmware 1.2.0+: versão no status identifica sem esperar o anúncio (também por Bluetooth)', () => {
+    const s = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', '"ds":"ausente","fw":"1.2.0"'), 'ble-nus');
+    expect(s.fw?.version).toBe('1.2.0');
+    expect(status(s, 'firmware')).toBe('ok');
+    const old = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', '"fw":"1.1.0"'));
+    expect(status(old, 'firmware')).toBe('pendente');
   });
 
   it('Bluetooth e nuvem são reconhecidos pelo transporte e pelo log de envio', () => {

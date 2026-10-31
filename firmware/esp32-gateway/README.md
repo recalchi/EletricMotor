@@ -29,6 +29,9 @@ Firmware de exemplo que publica a temperatura de um sensor **externo** no protoc
 4. No app, conecte o adaptador **Nuvem (ingestão HTTPS)**.
 
 ## Testes de bancada (firmware 1.1.0+)
+
+A partir da 1.2.0 o status traz `"fw":"X.Y.Z"` em toda mensagem (o app identifica a versão na hora, também por
+Bluetooth) e o anúncio `# fw` repete a cada 10 s.
 Sem sensor e sem resistor dá para testar o caminho completo só com jumpers: `v34` (GPIO34 ao 3V3 e depois ao GND),
 `d27` (GPIO27 ao GND), `tq13` (dedo no jumper do GPIO13). No app: Conectividade → Assistente do gateway ESP32.
 No PC: `npm run hw:smoke -- --port COM7`. Estes canais nunca são mapeados para componentes da moto.

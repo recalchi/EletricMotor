@@ -23,7 +23,8 @@ camadas 3 e 4 são rodadas na bancada e registradas no PR (`.github/pull_request
 | Protocolo, adaptadores, mapeamento | `src/integrations/*.test.ts` |
 | Gravação de firmware (`flasher.ts`) | `flasher.test.ts` **e** camada 3 (`hw:flash` nos modos `app` e `completa`) |
 | Firmware (`.ino`) | suba `FW_VERSION`, compile, copie as 4 partes para `public/firmware/esp32-gateway/<versão>/`, inclua no catálogo (`firmware.ts`), rode `npm test` (2b) e a camada 3 |
-| Plugin Android / APK | camada 4 no celular, itens 11–14 |
+| Plugin Android / APK / manifesto | `src/platform/android-manifest.test.ts` e camada 4 no celular, itens 11–14 |
+| Versão de PC (atalho) | `npm run pc` abre em http://localhost:4173 (recompila se houver mudança) |
 
 ### Salvaguardas protegidas por teste — não remover
 - **Blocos de leitura ≤ 16 KB** no backup (`READ_CHUNK`): blocos maiores permitem que uma confirmação atrasada vire o
@@ -59,6 +60,7 @@ No app: Conectividade → **Assistente do gateway ESP32** mostra cada verificaç
 11. Conectividade → Assistente: **Conectar USB** (PC: Chrome/Edge; celular: cabo OTG) → firmware, fluxo e testes de
     bancada ficam ✓; **Cadastrar gateway**; Exportar relatório.
 12. Conectividade → Assistente: **Conectar Bluetooth** → escolher `esp32-hub` (firmware 1.1.0+) → item Bluetooth ✓.
+    No APK, a lista de busca não pode ficar vazia (0.8.0 tinha esse defeito; guarda em `android-manifest.test.ts`).
 13. Firmware → versão detectada; atualizar no PC (Chrome/Edge) e conferir tela de progresso, histórico e backup salvo.
     No celular a gravação está marcada como experimental (não validada em hardware).
 14. Login Google (APK e web) → registros persistem no Firestore por usuário.

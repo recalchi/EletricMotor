@@ -1,5 +1,5 @@
 import type { DeviceProfile } from '../domain/types';
-import type { FirmwareAnnounce, UpdateAdvice } from './firmware';
+import { updateAdvice, type FirmwareAnnounce, type UpdateAdvice } from './firmware';
 import type { EmgpMessage } from './protocol';
 
 /**
@@ -73,8 +73,13 @@ export function benchMessage(s: BenchState, msg: EmgpMessage, transport: string,
   const v34 = msg.ch.v34;
   const adcHigh = s.adcHigh || (v34 != null && v34 >= 2.8);
   const adcLowAfterHigh = s.adcLowAfterHigh || (s.adcHigh && v34 != null && v34 <= 0.3);
+  // Firmware ≥ 1.2.0 manda a versão em toda mensagem (st.fw): identifica na hora, inclusive por Bluetooth
+  const stFw = typeof msg.st?.fw === 'string' ? msg.st.fw : undefined;
+  const fw = stFw && s.fw?.version !== stFw ? { ...s.fw, name: s.fw?.name ?? 'esp32-gateway', version: stFw, dev: msg.dev } : s.fw;
   return {
     ...s,
+    fw,
+    advice: fw !== s.fw && fw ? updateAdvice(fw) : s.advice,
     adcHigh,
     adcLowAfterHigh,
     messages: s.messages + 1,
@@ -145,7 +150,7 @@ export function benchChecks(s: BenchState, ctx: BenchContext): BenchCheck[] {
       detail: s.fw ? `${s.fw.name} ${s.fw.version} — ${s.advice?.message ?? ''}` : 'Anúncio de versão ainda não recebido.',
       howTo: s.fw
         ? 'Abra a tela Firmware e atualize (no computador, pelo Chrome/Edge).'
-        : 'Conecte e aguarde até 60 s: o firmware anuncia a versão no boot e a cada minuto.',
+        : 'Conecte e aguarde: a 1.2.0+ informa a versão em toda mensagem; a 1.1.0 só no boot e a cada minuto.',
     },
     {
       id: 'fluxo',
@@ -165,7 +170,7 @@ export function benchChecks(s: BenchState, ctx: BenchContext): BenchCheck[] {
       status: has('ble-nus') ? 'ok' : 'pendente',
       detail: has('ble-nus') ? 'Mensagens recebidas por Bluetooth.' : 'Nenhuma mensagem por Bluetooth ainda.',
       howTo:
-        'Desconecte o USB do app (a placa pode continuar no cabo só para energia), toque em Conectar em “Gateway Bluetooth” e escolha esp32-hub. Firmware 1.0.0 não aparece na busca — use 1.1.0+.',
+        'Desconecte o USB do app (a placa pode continuar no cabo só para energia), toque em Conectar em “Gateway Bluetooth” e escolha esp32-hub. No celular, permita “Dispositivos próximos”; se a lista ficar vazia, instale o APK 0.8.1+ (corrige a permissão de busca). Firmware 1.0.0 não aparece — use 1.1.0+.',
     },
     {
       id: 'adc',
