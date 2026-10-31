@@ -3,6 +3,9 @@ import { isPlausible, type EmgpMessage } from './protocol';
 
 export const MAPPING_VERSION = 'emgp-map-1.0.0';
 
+/** Canais de bancada do gateway ESP32 (jumpers): servem só aos testes, nunca viram telemetria nem aviso. */
+export const BENCH_CHANNELS = ['v34', 'd27', 'tq13'];
+
 export interface MappedResult {
   /** Origem atribuída: REAL somente para dispositivo validado; null = modo teste (não entra na telemetria). */
   origin: DataOrigin | null;
@@ -55,7 +58,7 @@ export function mapMessage(
       deviceId: device.id,
     });
   }
-  const unmapped = Object.keys(msg.ch).filter((k) => !mapped.has(k));
+  const unmapped = Object.keys(msg.ch).filter((k) => !mapped.has(k) && !BENCH_CHANNELS.includes(k));
   return { origin, samples, unmapped, warnings };
 }
 

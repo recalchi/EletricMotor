@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { liveEnabled } from '../src/app/liveLog';
-import { isLoopback } from './liveLogPlugin';
+import { isLoopback } from '../../tools/liveLogPlugin';
+import { liveEnabled } from './liveLog';
 
 describe('canal ao vivo (versão de PC)', () => {
   it('servidor só aceita o próprio computador', () => {

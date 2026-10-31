@@ -41,6 +41,7 @@ export function TestConsole() {
                 <span className="text-slate-500">{e.transport}</span>
                 {e.dev && <span className="text-cyanx-300">{e.dev}</span>}
                 {e.error && <span>⚠ {e.error}</span>}
+                {e.note && <span className="text-slate-400">{e.note}</span>}
                 {!!e.lost && <span className="text-amber-300">{e.lost} perdida(s)</span>}
               </div>
               {e.samples?.map((s) => (

@@ -111,7 +111,24 @@ describe('adaptador de fluxo (via injeção manual)', () => {
     const { a, real, tests } = setup();
     a.inject('{"v":1,"dev":"esp32-hub","seq":1,"ch":{"t1":30}}');
     expect(real).toHaveLength(0);
-    expect(tests[0].error).toMatch(/não cadastrado/);
+    expect(tests[0].error).toBeUndefined();
+    expect(tests[0].note).toMatch(/sem cadastro/);
+  });
+  it('reanúncio da mesma versão não repete o aviso no log', () => {
+    const { a, logs } = setup();
+    for (let i = 0; i < 3; i++) a.inject(`# fw name=esp32-gateway version=1.2.0 emgp=1 dev=esp32-hub n=${i}`);
+    expect(logs.filter((l) => /está atualizado|desatualizado|mais novo/i.test(l))).toHaveLength(1);
+  });
+  it('canais de bancada (v34, d27, tq13) não aparecem como "sem mapeamento"', () => {
+    const { a, tests } = setup(device());
+    a.inject('{"v":1,"dev":"esp32-hub","seq":1,"ch":{"t1":30,"v34":0.1,"d27":1,"tq13":1700,"x9":1}}');
+    expect(tests[0].unmapped).toEqual(['x9']);
+  });
+  it('linhas "#" repetidas viram uma só no log, com a contagem', () => {
+    const { a, logs } = setup();
+    for (let i = 0; i < 5; i++) a.inject('# sensor DS18B20 desconectado');
+    a.inject('# outra');
+    expect(logs).toEqual(['# sensor DS18B20 desconectado', '# sensor DS18B20 desconectado (repetiu 4×)', '# outra']);
   });
   it('dispositivo em teste: console com amostras mapeadas, sem telemetria', () => {
     const { a, real, tests } = setup(device());

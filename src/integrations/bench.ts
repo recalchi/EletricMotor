@@ -9,12 +9,14 @@ import type { EmgpMessage } from './protocol';
  */
 
 export const GATEWAY_DEV = 'esp32-hub';
+/** Apelido do gateway no app (o id técnico continua esp32-hub, que é o que o firmware envia). */
+export const GATEWAY_NICK = 'Faísca';
 
 /** Cadastro pronto do gateway: id igual ao DEVICE_ID do firmware; só t1 vira leitura da moto (motor hub). */
 export function gatewayDevice(now = Date.now()): DeviceProfile {
   return {
     id: GATEWAY_DEV,
-    name: 'Gateway ESP32 (esp32-hub)',
+    name: 'Faísca — gateway ESP32 (esp32-hub)',
     firmware: 'esp32-gateway',
     transport: 'serial',
     sensorCandidateId: 'temp-hub-surface',

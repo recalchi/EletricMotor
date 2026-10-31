@@ -6,7 +6,7 @@ import { useApp } from '../../app/store';
 import { bleNus, cloud, serial, useNow } from '../../app/telemetry';
 import { useCollection } from '../../data/hooks';
 import type { DeviceProfile } from '../../domain/types';
-import { GATEWAY_DEV, benchChecks, gatewayDevice, nextStep, type BenchCheck, type CheckStatus } from '../../integrations/bench';
+import { GATEWAY_DEV, GATEWAY_NICK, benchChecks, gatewayDevice, nextStep, type BenchCheck, type CheckStatus } from '../../integrations/bench';
 import { saveTextFile } from '../../platform/files';
 import { Button, Card, cx } from '../../shared/ui';
 
@@ -89,7 +89,7 @@ export function GatewayBench() {
 
   return (
     <Card
-      title="Assistente do gateway ESP32 — bateria de testes"
+      title={`Assistente do ${GATEWAY_NICK} (gateway ESP32) — bateria de testes`}
       right={
         <span className="text-xs text-slate-300" data-testid="bench-progress">
           {done}/{counted} ok

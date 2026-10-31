@@ -15,7 +15,7 @@ import {
 } from '../../integrations/flasher';
 import { exportFile, saveBinaryFile, saveTextFile } from '../../platform/files';
 import { isNative } from '../../platform/native';
-import { live } from '../../app/liveLog';
+import { live, setLiveBusy } from '../../app/liveLog';
 import { flashSupported, requestFlashPort } from '../../platform/serial';
 import { Bar, Button, Card, Field, PageHeader, cx } from '../../shared/ui';
 import { Icon } from '../../shared/ui/icons';
@@ -373,6 +373,7 @@ let flashSent = { id: '', lines: 0 };
 /** Canal ao vivo (PC): repassa as linhas novas do log da gravação. */
 function liveFlash(r: FlashRun) {
   if (flashSent.id !== r.id) flashSent = { id: r.id, lines: 0 };
+  setLiveBusy(r.result === 'executando');
   r.log.slice(flashSent.lines).forEach((l) => live('flash', l));
   flashSent.lines = r.log.length;
   if (r.result !== 'executando') live('flash', `resultado: ${r.result}${r.error ? ` — ${r.error}` : ''}`);

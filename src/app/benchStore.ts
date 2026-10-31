@@ -9,6 +9,8 @@ export const useBench = create<{ bench: BenchState; reset(): void }>((set) => ({
   reset: () => set({ bench: emptyBench() }),
 }));
 
+let lastPlaca = { line: '', at: 0 };
+
 export function attachBench(adapters: DeviceStreamAdapter[]) {
   for (const a of adapters) {
     a.onMessage((m, transport, at) => {
@@ -16,7 +18,11 @@ export function attachBench(adapters: DeviceStreamAdapter[]) {
       useBench.setState((s) => ({ bench: benchMessage(s.bench, m, transport, at) }));
     });
     a.onFirmwareLine((line, fw, advice) => {
-      live('placa', line);
+      const now = Date.now();
+      if (line !== lastPlaca.line || now - lastPlaca.at > 60_000) {
+        live('placa', line);
+        lastPlaca = { line, at: now };
+      }
       useBench.setState((s) => ({ bench: benchLog(s.bench, line, fw, advice) }));
     });
   }

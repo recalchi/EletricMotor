@@ -12,7 +12,7 @@ import { SimulatorAdapter } from '../integrations/simulator/SimulatorAdapter';
 import type { TelemetryAdapter } from '../integrations/adapter';
 import { attachBench } from './benchStore';
 import { sampleKey, useApp } from './store';
-import { live } from './liveLog';
+import { live, watchForNewBuild } from './liveLog';
 
 const VEHICLE = 'evs-1';
 /** Cadastro de dispositivos consultado de forma síncrona pelos adaptadores físicos. */
@@ -43,6 +43,7 @@ export function wireAdapters() {
     });
   }
   simulator.onEvent((e) => useApp.getState().pushSimEvent(e));
+  watchForNewBuild(() => serial.status().state === 'conectado');
   for (const h of HARDWARE) h.onTest((e) => useApp.getState().pushTest(e));
   // a injeção manual fica de fora: a bateria de testes só conta o que veio do hardware
   attachBench([serial, bleNus, bleEss]);

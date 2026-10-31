@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import type { Connect, Plugin } from 'vite';
@@ -48,8 +48,14 @@ function handler(): Connect.NextHandleFunction {
 }
 
 export function liveLogPlugin(): Plugin {
+  // id do build: embutido no app (__BUILD_ID__) e publicado em /__build.txt — o app recarrega quando mudam
+  const buildId = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+  let outDir = 'dist';
   return {
     name: 'eletricmotor-live-log',
+    config: () => ({ define: { __BUILD_ID__: JSON.stringify(buildId) } }),
+    configResolved: (c) => void (outDir = resolve(c.root, c.build.outDir)),
+    writeBundle: () => writeFileSync(resolve(outDir, '__build.txt'), buildId),
     configureServer: (s) => void s.middlewares.use(handler()),
     configurePreviewServer: (s) => void s.middlewares.use(handler()),
   };

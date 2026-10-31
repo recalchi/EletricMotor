@@ -12,11 +12,16 @@ export interface TestConsoleEntry {
   raw: string;
   dev?: string;
   error?: string;
+  /** Situação esperada (ex.: ainda sem cadastro) — informativa, não é erro. */
+  note?: string;
   samples?: TelemetrySample[];
   unmapped?: string[];
   warnings?: string[];
   lost?: number;
 }
+
+/** Janela em que linhas "#" idênticas e seguidas são agrupadas no log. */
+const HASH_REPEAT_MS = 60_000;
 
 export type DeviceResolver = (deviceId: string) => DeviceProfile | undefined;
 
@@ -28,6 +33,7 @@ export type DeviceResolver = (deviceId: string) => DeviceProfile | undefined;
 export abstract class DeviceStreamAdapter extends BaseAdapter {
   abstract transport: DeviceTransport | 'manual';
   private lines = new LineBuffer();
+  private lastHash: { text: string; at: number; count: number } | null = null;
   private lastSeq = new Map<string, number>();
   private testHandlers = new Set<(e: TestConsoleEntry) => void>();
   private msgHandlers = new Set<(m: EmgpMessage, transport: string, at: number) => void>();
@@ -82,14 +88,24 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
   protected handleLine(line: string, receivedAt = Date.now()) {
     capture({ src: this.id, kind: 'linha', data: line });
     if (line.trimStart().startsWith('#')) {
-      // comentário/log do firmware — não é telemetria
-      this.log('info', line.trim().slice(0, 200));
+      // comentário/log do firmware — não é telemetria. Repetições seguidas (ex.: sensor ausente a cada 2 s) viram
+      // uma linha só, com a contagem, para não inundar o log
+      const text = line.trim().slice(0, 200);
+      const rep = this.lastHash;
+      if (rep && rep.text === text && receivedAt - rep.at < HASH_REPEAT_MS) rep.count++;
+      else {
+        if (rep && rep.count) this.log('info', `${rep.text} (repetiu ${rep.count}×)`);
+        this.lastHash = { text, at: receivedAt, count: 0 };
+        this.log('info', text);
+      }
       const fw = parseFirmwareAnnounce(line);
       const advice = fw ? updateAdvice(fw) : undefined;
       if (fw && advice) {
+        // o firmware reanuncia a cada 10 s: só registra quando a versão ou a situação muda
+        const same = this.st.firmware?.version === fw.version && this.st.firmwareAdvice?.status === advice.status;
         this.st.firmware = fw;
         this.st.firmwareAdvice = advice;
-        this.log(advice.status === 'desatualizado' ? 'warn' : 'info', advice.message);
+        if (!same) this.log(advice.status === 'desatualizado' ? 'warn' : 'info', advice.message);
       }
       this.fwHandlers.forEach((h) => h(line, fw ?? undefined, advice));
       return;
@@ -127,7 +143,7 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
         transport: this.transport,
         raw,
         dev: msg.dev,
-        error: 'dispositivo não cadastrado — cadastre-o em Conectividade → Dispositivos',
+        note: 'ainda sem cadastro — normal no início; cadastre em Conectividade → Assistente → Cadastrar gateway',
       });
       return;
     }
