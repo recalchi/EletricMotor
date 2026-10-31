@@ -1,4 +1,4 @@
-# Abre o EletricMotor no PC como um app (janela própria do Chrome/Edge), servido em http://localhost:4173.
+﻿# Abre o EletricMotor no PC como um app (janela própria do Chrome/Edge), servido em http://localhost:4173.
 # - Recompila sozinho quando algo em src/, public/, index.html ou .env.local mudou depois do último build.
 # - Reaproveita o servidor se ele já estiver rodando. Para parar: scripts/pc/abrir-eletricmotor.ps1 -Parar
 # localhost é contexto seguro: USB (Web Serial), Bluetooth (Web Bluetooth) e login Google funcionam.

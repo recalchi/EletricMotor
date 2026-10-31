@@ -60,6 +60,11 @@ A porta USB só aceita um programa por vez. Para acompanhar um teste sem disputa
 - Sem o app aberto, `npm run hw:monitor -- --port COM7` escuta a placa direto, com a mesma lógica.
 - Abrir a porta pelo Chrome reinicia a placa (DTR/RTS): isso derruba uma conexão Bluetooth ativa no celular.
 
+## Captura na moto (evidências, somente recepção)
+Roteiro para o agente/notebook: [`docs/vehicle-evidence/CAPTURA-MOTO.md`](../vehicle-evidence/CAPTURA-MOTO.md) —
+escuta Bluetooth LE passiva por fases (base/ligando/ligada/desligando), fotografia USB, notas e relatório com versão
+pública mascarada + cópia privada no OneDrive. Um clique: `scripts\moto\Captura-Moto.cmd`.
+
 ## Camada 4 — roteiro manual
 1. Login demo → Central mostra KPIs **INDISPONÍVEL** (sem números).
 2. Laboratório → Iniciar → faixa **MODO SIMULAÇÃO** visível nas telas com dados.
