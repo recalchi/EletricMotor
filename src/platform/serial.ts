@@ -19,6 +19,14 @@ export function serialSupported(): boolean {
 }
 
 /** grantedOnly: só reconecta a uma porta já autorizada (sem seletor) — usado na conexão automática ao abrir. */
+/** Navegador: avisa quando um dispositivo USB serial já autorizado é plugado de novo (no APK não há evento). */
+export function onSerialPlugged(cb: () => void): () => void {
+  const s = typeof navigator !== 'undefined' && !isNative() ? navigator.serial : undefined;
+  if (!s?.addEventListener) return () => undefined;
+  s.addEventListener('connect', cb);
+  return () => s.removeEventListener?.('connect', cb);
+}
+
 export async function openSerial(baudRate: number, opts: { grantedOnly?: boolean } = {}): Promise<SerialLink> {
   return isNative() ? openNative(baudRate) : openWeb(baudRate, opts.grantedOnly);
 }

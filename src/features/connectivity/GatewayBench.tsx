@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { live } from '../../app/liveLog';
+import { JumperPanel } from './JumperPanel';
 import { Link } from 'react-router-dom';
 import { useBench } from '../../app/benchStore';
 import { useApp } from '../../app/store';
@@ -26,10 +27,10 @@ const GROUPS: [BenchCheck['group'], string][] = [
 
 /** Mapa de ligações da bancada — o mesmo do firmware 1.1.0. */
 const WIRING = [
-  ['GPIO34 → 3V3 / GND', 'tensão (v34)'],
-  ['GPIO27 → GND', 'entrada digital (d27)'],
-  ['GPIO13 + dedo', 'toque (tq13)'],
-  ['GPIO4 + 4,7 kΩ → 3V3', 'DS18B20 (t1) — quando chegar'],
+  ['pino 34 + 3V3, depois 34 + GND', 'tensão (v34)'],
+  ['pino 27 + GND', 'entrada digital (d27)'],
+  ['pino 13 + dedo', 'toque (tq13)'],
+  ['pino 4 + 4,7 kΩ → 3V3', 'DS18B20 (t1) — quando chegar'],
 ];
 
 function report(checks: BenchCheck[], extra: string) {
@@ -147,6 +148,7 @@ export function GatewayBench() {
         </Button>
       </div>
       {err && <p className="mb-2 text-sm text-red-300">{err}</p>}
+      <JumperPanel bench={bench} live={!!bench.lastAt && Date.now() - bench.lastAt < 6000} />
 
       <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
         <div className="space-y-3">
@@ -171,7 +173,7 @@ export function GatewayBench() {
           ))}
         </div>
         <div className="rounded border border-ink-700 p-3 text-xs lg:w-64">
-          <div className="mb-1 font-medium text-slate-300">Ligações na protoboard</div>
+          <div className="mb-1 font-medium text-slate-300">Ligações (pinos do ESP32)</div>
           <table className="w-full">
             <tbody>
               {WIRING.map(([w, what]) => (

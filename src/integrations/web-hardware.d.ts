@@ -16,6 +16,8 @@ interface SerialPort {
 interface Serial {
   requestPort(options?: { filters?: SerialPortInfo[] }): Promise<SerialPort>;
   getPorts?(): Promise<SerialPort[]>;
+  addEventListener?(type: 'connect' | 'disconnect', cb: () => void): void;
+  removeEventListener?(type: 'connect' | 'disconnect', cb: () => void): void;
 }
 
 interface BluetoothRemoteGATTCharacteristic extends EventTarget {
