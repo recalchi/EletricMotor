@@ -43,6 +43,11 @@ Firmware ≥ 1.1.0 publica sempre, mesmo sem sensor, os canais de bancada:
 | jumper no GPIO13 + dedo | `tq13` | valor cai bastante ao tocar |
 | GPIO4 + resistor 4,7 kΩ → 3V3 + DS18B20 | `t1` | temperatura (quando o sensor chegar) |
 
+Valores reais medidos em 31/10/2026 (placa do projeto, jumper macho-fêmea, protoboard como emenda): v34 = 3,124 V no 3V3
+e 0,142 V no GND (piso do ADC calibrado — solto também lê 0,142 V, por isso a ordem 3V3 → GND); d27 = 1 solto, 0 no
+GND; tq13 ≈ 1800 solto, ≈ 1390 com jumper pendurado e 450–1060 ao tocar. O pino EN fica ao lado do 3V3: encostar nele
+reinicia a placa (inofensivo). Guia ilustrado: `public/guia/testes-jumper.html` (no app: painel "Teste com jumpers").
+
 No app: Conectividade → **Assistente do gateway ESP32** mostra cada verificação, o próximo passo e exporta o relatório.
 
 ## Acompanhamento ao vivo (versão de PC)
