@@ -249,7 +249,17 @@ export interface UpdateOptions {
 }
 
 const EFUSE_RD_REG_BASE = 0x3ff5a000;
-const READ_CHUNK = 0x10000;
+/**
+ * Tamanho do bloco de leitura do backup. NÃO aumentar sem rever isto: na leitura o esptool-js confirma cada pacote
+ * de 4 KB enviando ao stub o total já recebido (4 bytes, little-endian). Se o stub sair da leitura (pacote perdido
+ * nesta ponte CP2102) uma confirmação atrasada é lida como COMANDO: o 2º byte vira o código. Com blocos ≥ 0xD000 a
+ * confirmação "00 D0 00 00" é ERASE_FLASH — em 30/10/2026 isso apagou a flash da placa durante um backup que falhou.
+ * Com 0x4000 as confirmações vão de 0x1000 a 0x4000 (códigos 0x10–0x40), longe de 0xD0–0xD3 (apagar/ler/executar).
+ */
+export const READ_CHUNK = 0x4000;
+/** Códigos do stub que nunca podem ser formados por uma confirmação de leitura. */
+export const DANGEROUS_STUB_COMMANDS = [0xd0, 0xd1, 0xd2, 0xd3];
+const READ_TRIES = 5;
 const hex = (n: number) => `0x${n.toString(16).toUpperCase()}`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -330,6 +340,15 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
       },
     });
 
+    // sem isto um pacote perdido trava a leitura por 100 s antes de falhar
+    loader.FLASH_READ_TIMEOUT = 8000;
+    const reconnect = async () => {
+      await transport!.disconnect().catch(() => undefined);
+      await sleep(300);
+      loader.IS_STUB = false;
+      await loader.main();
+    };
+
     const description = await stage('conexao', async (st) => {
       const d = await loader.main();
       st.detail = `Conectado: ${d}`;
@@ -355,7 +374,18 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
 
     const app = files.find((f) => f.a.role === 'app')!;
     const entries = await stage('particoes', async (st) => {
-      const e = parsePartitionTable(await loader.readFlash(0x8000, 0xc00));
+      let raw: Uint8Array | null = null;
+      for (let t = 1; t <= READ_TRIES && !raw; t++) {
+        try {
+          const d = await loader.readFlash(0x8000, 0xc00);
+          if (md5Hex(d) === (await loader.flashMd5sum(0x8000, 0xc00))) raw = d;
+        } catch (err) {
+          log(`  aviso: leitura da tabela falhou (${summarizeError(err).detail.slice(0, 120)})`);
+        }
+        if (!raw) await reconnect();
+      }
+      if (!raw) throw new FlashError('Não foi possível ler a tabela de partições com segurança. Nada foi gravado.');
+      const e = parsePartitionTable(raw);
       if (opts.mode === 'app') {
         const err = checkPartitionsForApp(e, app.data.length);
         if (err) throw new FlashError(err);
@@ -378,7 +408,7 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
           const len = Math.min(READ_CHUNK, offset + size - off);
           let ok: Uint8Array | null = null;
           let lastErr: unknown;
-          for (let t = 1; t <= 3 && !ok; t++) {
+          for (let t = 1; t <= READ_TRIES && !ok; t++) {
             try {
               const data = await loader.readFlash(off, len);
               const chipMd5 = await loader.flashMd5sum(off, len);
@@ -389,8 +419,8 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
             }
             if (!ok) {
               log(`  aviso: bloco ${hex(off)} tentativa ${t} falhou (${summarizeError(lastErr).detail.slice(0, 120)})`);
-              await sleep(300);
-              transport?.flushInput();
+              // o stub pode ter ficado no meio do envio: reinicia no modo de gravação e recarrega o stub
+              await reconnect();
             }
           }
           if (!ok) throw new FlashError(`Backup: o bloco ${hex(off)} não pôde ser lido com segurança. Nada foi gravado.`);
@@ -443,7 +473,7 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
     });
 
     await stage('reinicio', async (st) => {
-      await loader.after('hard_reset');
+      // o reinício é feito já com a porta de escuta aberta, para não perder o anúncio do boot
       await transport!.disconnect();
       transport = null;
       const t0 = Date.now();
@@ -477,6 +507,10 @@ export async function runFirmwareUpdate(release: FirmwareRelease, opts: UpdateOp
 async function listenBoot(port: FlashPort, timeoutMs: number, enough: (text: string) => boolean): Promise<string> {
   await port.open({ baudRate: 115200 });
   const reader = port.readable!.getReader();
+  // pulso em EN pelo RTS com IO0 livre (DTR solto): reinício normal, como o botão EN da placa
+  await port.setSignals({ dataTerminalReady: false, requestToSend: true });
+  await sleep(120);
+  await port.setSignals({ dataTerminalReady: false, requestToSend: false });
   const dec = new TextDecoder();
   let text = '';
   const deadline = Date.now() + timeoutMs;

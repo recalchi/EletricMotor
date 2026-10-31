@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FIRMWARE_CATALOG } from './firmware';
 import {
+  DANGEROUS_STUB_COMMANDS,
   FlashError,
+  READ_CHUNK,
   backupRange,
   bootCheck,
   checkChip,
@@ -152,5 +154,19 @@ describe('monitoramento', () => {
     const r = newRun(FIRMWARE_CATALOG[0], 'app', '1.0.0', 1);
     expect(r.stages).toHaveLength(9);
     expect(r.stages.every((s) => s.state === 'pendente')).toBe(true);
+  });
+});
+
+describe('segurança da leitura (incidente de 30/10/2026)', () => {
+  it('nenhuma confirmação de leitura pode virar comando de apagar/ler/executar do stub', () => {
+    // confirmações = total recebido após cada pacote de 4 KB (e o tamanho final do bloco)
+    for (const size of [READ_CHUNK, 0xc00]) {
+      for (let n = 0x1000; n <= size; n += 0x1000) {
+        const ack = [n & 0xff, (n >> 8) & 0xff];
+        expect(DANGEROUS_STUB_COMMANDS).not.toContain(ack[1]);
+      }
+      expect(DANGEROUS_STUB_COMMANDS).not.toContain((size >> 8) & 0xff);
+    }
+    expect(READ_CHUNK).toBeLessThan(0xd000);
   });
 });

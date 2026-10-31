@@ -159,7 +159,8 @@ export default function FirmwarePage() {
   const [history, setHistory] = useState<FlashRun[]>(() => loadHistory());
   const [mode, setMode] = useState<FlashMode>('app');
   const [backup, setBackup] = useState(true);
-  const [baud, setBaud] = useState(115200);
+  // 115200: única velocidade validada em hardware para o backup nesta ponte CP2102 (30/10/2026)
+  const baud = 115200;
   const [startErr, setStartErr] = useState<string | null>(null);
 
   const detected = HARDWARE.map((a) => ({ a, st: a.status() })).filter((x) => x.st.firmware);
@@ -271,7 +272,7 @@ export default function FirmwarePage() {
           </p>
         ) : (
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <Field label="Versão">
                 <select
                   className="input"
@@ -294,12 +295,6 @@ export default function FirmwarePage() {
                       {MODE_LABELS[m]}
                     </option>
                   ))}
-                </select>
-              </Field>
-              <Field label="Velocidade" hint="115200 é a mais tolerante a cabos e adaptadores ruins.">
-                <select className="input" value={baud} onChange={(e) => setBaud(Number(e.target.value))}>
-                  <option value={115200}>115200 (segura)</option>
-                  <option value={460800}>460800 (rápida)</option>
                 </select>
               </Field>
             </div>
