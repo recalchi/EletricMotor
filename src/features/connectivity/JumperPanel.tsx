@@ -59,6 +59,10 @@ export function JumperPanel({ bench, live }: { bench: BenchState; live: boolean 
         Os números (34, 27, 13, 3V3, GND) são os nomes impressos ao lado dos pinos do ESP32 — não da protoboard. A
         protoboard só emenda as duas pontas macho: mesma coluna de 5 furinhos = ligado. Pode mexer nos jumpers com a
         placa ligada no USB; só nunca use o pino 5V. Um teste por vez.
+        {' '}
+        <a href="/guia/testes-jumper.html" target="_blank" rel="noreferrer" className="text-cyanx-300 underline">
+          Ver desenho passo a passo
+        </a>
       </p>
       <div className="grid gap-2 md:grid-cols-3">
         {tiles.map((t) => (
