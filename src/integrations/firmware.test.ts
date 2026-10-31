@@ -37,18 +37,20 @@ describe('anúncio de firmware (# fw)', () => {
   });
   it('orienta atualização conforme o catálogo', () => {
     const fw = parseFirmwareAnnounce(REAL)!;
-    expect(updateAdvice(fw).status).toBe('atualizado');
+    const latest = latestRelease('esp32-gateway')!;
+    expect(updateAdvice({ ...fw, version: latest.version }).status).toBe('atualizado');
     const adv = updateAdvice(fw, [rel('1.0.0'), rel('1.1.0')]);
     expect(adv.status).toBe('desatualizado');
     expect(adv.message).toMatch(/1\.0\.0 → 1\.1\.0/);
     expect(adv.message).toMatch(/atualizar-firmware\.ps1/);
-    expect(updateAdvice({ ...fw, version: '9.0.0' }).status).toBe('mais_novo');
+    expect(adv.message).toMatch(/tela Firmware/);
+    expect(updateAdvice({ ...fw, version: '99.0.0' }).status).toBe('mais_novo');
     expect(updateAdvice({ ...fw, name: 'outro' }).status).toBe('desconhecido');
   });
-  it('catálogo tem a versão gravada e hash no formato SHA-256', () => {
-    const l = latestRelease('esp32-gateway')!;
-    expect(l.version).toBe('1.0.0');
+  it('catálogo tem hash no formato SHA-256 e versões sem repetição', () => {
     expect(FIRMWARE_CATALOG.every((r) => /^[0-9a-f]{64}$/.test(r.sha256))).toBe(true);
+    const keys = FIRMWARE_CATALOG.map((r) => `${r.name}@${r.version}`);
+    expect(new Set(keys).size).toBe(keys.length);
   });
   it('o adaptador registra o firmware no status, sem gerar telemetria', () => {
     const a = new ManualEmgpAdapter(() => undefined, 'evs-1');
@@ -56,8 +58,8 @@ describe('anúncio de firmware (# fw)', () => {
     a.onLog((e) => logs.push(e.message));
     a.inject(`${REAL}\n# sensor DS18B20 desconectado`);
     expect(a.status().firmware?.version).toBe('1.0.0');
-    expect(a.status().firmwareAdvice?.status).toBe('atualizado');
+    expect(a.status().firmwareAdvice?.status).toBe('desatualizado');
     expect(a.status().samplesReceived).toBe(0);
-    expect(logs.some((l) => l.includes('está atualizado'))).toBe(true);
+    expect(logs.some((l) => l.includes('Atualização disponível: 1.0.0 →'))).toBe(true);
   });
 });

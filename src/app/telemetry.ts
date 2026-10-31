@@ -10,6 +10,7 @@ import { ManualEmgpAdapter, type DeviceStreamAdapter } from '../integrations/har
 import { SerialAdapter } from '../integrations/hardware/SerialAdapter';
 import { SimulatorAdapter } from '../integrations/simulator/SimulatorAdapter';
 import type { TelemetryAdapter } from '../integrations/adapter';
+import { attachBench } from './benchStore';
 import { sampleKey, useApp } from './store';
 
 const VEHICLE = 'evs-1';
@@ -38,6 +39,8 @@ export function wireAdapters() {
   }
   simulator.onEvent((e) => useApp.getState().pushSimEvent(e));
   for (const h of HARDWARE) h.onTest((e) => useApp.getState().pushTest(e));
+  // a injeção manual fica de fora: a bateria de testes só conta o que veio do hardware
+  attachBench([serial, bleNus, bleEss]);
 }
 
 export async function startSimulation() {

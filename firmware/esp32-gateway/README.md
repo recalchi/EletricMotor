@@ -28,6 +28,11 @@ Firmware de exemplo que publica a temperatura de um sensor **externo** no protoc
 3. Preencha `WIFI_SSID`/`WIFI_PASSWORD`/`INGEST_URL`. O firmware envia lotes de 10 mensagens.
 4. No app, conecte o adaptador **Nuvem (ingestão HTTPS)**.
 
+## Testes de bancada (firmware 1.1.0+)
+Sem sensor e sem resistor dá para testar o caminho completo só com jumpers: `v34` (GPIO34 ao 3V3 e depois ao GND),
+`d27` (GPIO27 ao GND), `tq13` (dedo no jumper do GPIO13). No app: Conectividade → Assistente do gateway ESP32.
+No PC: `npm run hw:smoke -- --port COM7`. Estes canais nunca são mapeados para componentes da moto.
+
 ## Versão e atualização do firmware
 - O firmware anuncia `# fw name=esp32-gateway version=X.Y.Z …` no boot e a cada 60 s; o app EletricMotor mostra a
   versão e avisa quando há atualização no catálogo (`src/integrations/firmware.ts`).
@@ -47,7 +52,8 @@ Firmware de exemplo que publica a temperatura de um sensor **externo** no protoc
   conclui se o firmware anunciar `# fw …` sem sinal de pane. Qualquer falha aborta antes de gravar.
 - Requer o driver **Silicon Labs CP210x** (Windows Update o oferece para `USB\VID_10C4&PID_EA60`) e esptool ≥ 5
   (vem com o core esp32 do Arduino).
-- Ao publicar nova versão: suba `FW_VERSION` no `.ino`, compile, gere o binário completo (merged) e acrescente a
-  versão com o SHA-256 em `FIRMWARE_CATALOG`.
+- Ao publicar nova versão: suba `FW_VERSION` no `.ino`, compile, copie as 4 partes do build para
+  `public/firmware/esp32-gateway/<versão>/`, guarde o binário completo (merged) em `firmware/esp32-gateway/dist/`
+  (fora do git) e acrescente a versão em `FIRMWARE_CATALOG` — `npm test` confere hashes e versão.
 - Observação de hardware: nesta placa (CP2102), leituras longas da flash acima de 115200 baud caíram de forma
   reprodutível; por isso o backup usa 115200 (≈ 6 min). A gravação a 460800 funcionou e é conferida por hash.

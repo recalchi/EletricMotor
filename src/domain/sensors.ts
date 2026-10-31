@@ -64,9 +64,9 @@ export const SENSOR_CANDIDATES: SensorCandidate[] = [
     estimatedCostBRL: '40–80 (placa) + caixa',
     status: 'em_implantacao',
     channel: 'st.rssi',
-    firmware: 'esp32-gateway@1.0.0',
+    firmware: 'esp32-gateway@1.1.0',
     progress:
-      'Firmware 1.0.0 gravado e verificado por hash na placa real; boot sem erros. O app lê a versão (# fw) e avisa quando houver atualização. Ainda não montado na moto.',
+      'Firmware 1.1.0 gravado pelo próprio código do app e verificado pelo chip; boot e mensagens EMGP conferidos em bancada (hw:smoke). Bluetooth corrigido na 1.1.0 — falta testar no celular. Ainda não montado na moto.',
   },
   {
     id: 'temp-hub-surface',

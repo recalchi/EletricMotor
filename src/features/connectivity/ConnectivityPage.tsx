@@ -8,6 +8,7 @@ import { BAUD_RATES, SerialAdapter } from '../../integrations/hardware/SerialAda
 import type { TelemetryAdapter } from '../../integrations/adapter';
 import { Button, Card, PageHeader, cx } from '../../shared/ui';
 import { DevicesPanel } from './DevicesPanel';
+import { GatewayBench } from './GatewayBench';
 import { TestConsole } from './TestConsole';
 
 const STATE_STYLE: Record<string, string> = {
@@ -54,6 +55,8 @@ export default function ConnectivityPage() {
         title="Conectividade"
         subtitle="Firebase não se conecta diretamente à moto. Toda leitura passa por um adaptador somente-leitura e por um dispositivo validado."
       />
+      <GatewayBench />
+
       <Card title="Fluxo de dados">
         <div className="flex flex-col gap-1.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           {[

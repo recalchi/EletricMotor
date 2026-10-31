@@ -28,11 +28,19 @@
 #include "secrets.h"  // copie de secrets.example.h
 
 #define FW_NAME "esp32-gateway"
-#define FW_VERSION "1.0.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
+#define FW_VERSION "1.1.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
 #define FW_ANNOUNCE_MS 60000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
 #define HTTP_BATCH 10           // mensagens por POST (função aceita até 50; limite 1 req/s)
+
+// Testes de bancada (só jumpers, sem componentes) — canais de diagnóstico, nunca mapeados para a moto:
+//   v34  tensão no GPIO34 (V): jumper GPIO34→3V3 ≈ 3,1–3,3 V; GPIO34→GND ≈ 0 V
+//   d27  GPIO27 com pull-up interno: solto = 1; jumper GPIO27→GND = 0
+//   tq13 toque capacitivo no GPIO13 (T4): encostar o dedo na ponta do jumper faz o valor cair bastante
+#define BENCH_ADC_PIN 34
+#define BENCH_DIN_PIN 27
+#define BENCH_TOUCH_PIN 13
 
 // Nordic UART Service (padrão de fato para UART sobre BLE)
 #define NUS_SERVICE "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -61,9 +69,17 @@ void setupBle() {
   NimBLEService* svc = server->createService(NUS_SERVICE);
   txChar = svc->createCharacteristic(NUS_TX, NIMBLE_PROPERTY::NOTIFY);
   svc->start();
+  // Pacote de anúncio tem 31 bytes: flags (3) + UUID de 128 bits (18) + nome "esp32-hub" (11) não cabem juntos —
+  // na 1.0.0 o UUID se perdia e o app (que filtra pelo serviço NUS) não achava a placa. Nome vai na resposta de varredura.
   NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
-  adv->addServiceUUID(NUS_SERVICE);
-  adv->setName(DEVICE_ID);
+  NimBLEAdvertisementData advData;
+  advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
+  advData.setCompleteServices(NimBLEUUID(NUS_SERVICE));
+  adv->setAdvertisementData(advData);
+  NimBLEAdvertisementData scanData;
+  scanData.setName(DEVICE_ID);
+  adv->setScanResponseData(scanData);
+  adv->enableScanResponse(true);
   adv->start();
 }
 
@@ -114,6 +130,8 @@ void setup() {
   Serial.begin(115200);
   announceFirmware();
   sensors.begin();
+  pinMode(BENCH_DIN_PIN, INPUT_PULLUP);
+  analogSetPinAttenuation(BENCH_ADC_PIN, ADC_11db);  // faixa até ~3,1 V
   setupBle();
   if (wifiEnabled()) {
     WiFi.mode(WIFI_STA);
@@ -134,16 +152,20 @@ void loop() {
 
   sensors.requestTemperatures();
   float t = sensors.getTempCByIndex(0);
-  if (t == DEVICE_DISCONNECTED_C) {
-    Serial.println("# sensor DS18B20 desconectado");
-    return;
-  }
+  bool hasTemp = t != DEVICE_DISCONNECTED_C;
+  if (!hasTemp) Serial.println("# sensor DS18B20 desconectado");
 
   // ts só é enviado com relógio sincronizado (NTP); sem ele o app usa o horário de recebimento
   time_t now = time(nullptr);
   String ts = now > 1700000000 ? String(",\"ts\":") + String((uint64_t)now * 1000ULL) : String("");
 
-  String line = String("{\"v\":1,\"dev\":\"") + DEVICE_ID + "\",\"seq\":" + String(seq++) + ts +
-                ",\"ch\":{\"t1\":" + String(t, 2) + "},\"st\":{\"rssi\":" + String(WiFi.RSSI()) + "}}";
+  // A partir da 1.1.0 sempre publica: os canais de bancada permitem testar o caminho completo só com o ESP32
+  String ch = String("\"v34\":") + String(analogReadMilliVolts(BENCH_ADC_PIN) / 1000.0, 3) +
+              ",\"d27\":" + String(digitalRead(BENCH_DIN_PIN)) + ",\"tq13\":" + String(touchRead(BENCH_TOUCH_PIN));
+  if (hasTemp) ch = String("\"t1\":") + String(t, 2) + "," + ch;
+  String line = String("{\"v\":1,\"dev\":\"") + DEVICE_ID + "\",\"seq\":" + String(seq++) + ts + ",\"ch\":{" + ch +
+                "},\"st\":{\"rssi\":" + String(WiFi.RSSI()) + ",\"up\":" + String(millis() / 1000) +
+                ",\"heap\":" + String(ESP.getFreeHeap() / 1024) + ",\"ble\":" + String(bleClient ? 1 : 0) +
+                ",\"ds\":\"" + (hasTemp ? "ok" : "ausente") + "\"}}";
   publish(line);
 }

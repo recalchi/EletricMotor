@@ -1,7 +1,7 @@
 import type { DeviceProfile, DeviceTransport, TelemetrySample } from '../../domain/types';
 import { capture, reportError, toHex } from '../../app/diagnostics';
 import { BaseAdapter } from '../adapter';
-import { parseFirmwareAnnounce, updateAdvice } from '../firmware';
+import { parseFirmwareAnnounce, updateAdvice, type FirmwareAnnounce, type UpdateAdvice } from '../firmware';
 import { mapMessage } from '../mapping';
 import { LineBuffer, parseEmgpLine, seqGap, type EmgpMessage } from '../protocol';
 
@@ -30,6 +30,8 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
   private lines = new LineBuffer();
   private lastSeq = new Map<string, number>();
   private testHandlers = new Set<(e: TestConsoleEntry) => void>();
+  private msgHandlers = new Set<(m: EmgpMessage, transport: string, at: number) => void>();
+  private fwHandlers = new Set<(line: string, fw?: FirmwareAnnounce, advice?: UpdateAdvice) => void>();
   lostTotal = 0;
 
   constructor(
@@ -42,6 +44,16 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
   onTest(h: (e: TestConsoleEntry) => void) {
     this.testHandlers.add(h);
     return () => void this.testHandlers.delete(h);
+  }
+  /** Toda mensagem EMGP válida (validado ou não) — usada pela bateria de testes de bancada. */
+  onMessage(h: (m: EmgpMessage, transport: string, at: number) => void) {
+    this.msgHandlers.add(h);
+    return () => void this.msgHandlers.delete(h);
+  }
+  /** Linhas "#" do firmware, com o anúncio de versão já interpretado quando houver. */
+  onFirmwareLine(h: (line: string, fw?: FirmwareAnnounce, advice?: UpdateAdvice) => void) {
+    this.fwHandlers.add(h);
+    return () => void this.fwHandlers.delete(h);
   }
   protected test(e: TestConsoleEntry) {
     this.testHandlers.forEach((h) => h(e));
@@ -73,12 +85,13 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
       // comentário/log do firmware — não é telemetria
       this.log('info', line.trim().slice(0, 200));
       const fw = parseFirmwareAnnounce(line);
-      if (fw) {
-        const advice = updateAdvice(fw);
+      const advice = fw ? updateAdvice(fw) : undefined;
+      if (fw && advice) {
         this.st.firmware = fw;
         this.st.firmwareAdvice = advice;
         this.log(advice.status === 'desatualizado' ? 'warn' : 'info', advice.message);
       }
+      this.fwHandlers.forEach((h) => h(line, fw ?? undefined, advice));
       return;
     }
     const r = parseEmgpLine(line, receivedAt);
@@ -94,6 +107,7 @@ export abstract class DeviceStreamAdapter extends BaseAdapter {
     const gap = seqGap(this.lastSeq.get(msg.dev) ?? null, msg.seq);
     this.lastSeq.set(msg.dev, msg.seq);
     if (gap.duplicate) return;
+    this.msgHandlers.forEach((h) => h(msg, this.transport, receivedAt));
     if (gap.lost > 0) {
       this.lostTotal += gap.lost;
       this.log('warn', `${msg.dev}: ${gap.lost} mensagem(ns) perdida(s) (seq ${msg.seq})`);

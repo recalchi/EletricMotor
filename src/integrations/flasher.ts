@@ -197,7 +197,8 @@ export function bootCheck(
 ): { ok: boolean; done: boolean; announce?: FirmwareAnnounce; problem?: string } {
   const panic = PANIC.exec(text);
   if (panic) return { ok: false, done: true, problem: `Erro no boot após gravar: "${panic[0]}".` };
-  for (const line of text.split(/\r?\n/)) {
+  // só linhas completas: a serial entrega pedaços e "version=1." pode ser o começo de "version=1.1.0"
+  for (const line of text.split(/\r?\n/).slice(0, -1)) {
     const fw = parseFirmwareAnnounce(line);
     if (!fw) continue;
     if (fw.name === name && fw.version === version) return { ok: true, done: true, announce: fw };

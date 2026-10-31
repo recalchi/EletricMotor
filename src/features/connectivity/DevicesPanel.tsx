@@ -5,6 +5,7 @@ import { generateToken, sha256Hex } from '../../data/deviceToken';
 import { CATALOG, getComponent } from '../../domain/catalog';
 import { SENSOR_CANDIDATES } from '../../domain/sensors';
 import type { DeviceChannel, DeviceProfile, DeviceTransport, Quantity } from '../../domain/types';
+import { gatewayDevice } from '../../integrations/bench';
 import { VALIDATION_CHECKLIST } from '../../integrations/mapping';
 import { Button, Card, Field, cx } from '../../shared/ui';
 import { Icon } from '../../shared/ui/icons';
@@ -58,15 +59,8 @@ const blankDevice = (): DeviceProfile => ({
 const TEMPLATES: { label: string; device: Partial<DeviceProfile> }[] = [
   {
     label: 'Gateway ESP32 (firmware esp32-gateway) + temperatura do motor hub',
-    device: {
-      // id/nome iguais ao DEVICE_ID do firmware — as mensagens chegam com "dev":"esp32-hub"
-      id: 'esp32-hub',
-      name: 'Gateway ESP32 (esp32-hub)',
-      firmware: 'esp32-gateway@1.0.0',
-      transport: 'serial',
-      sensorCandidateId: 'temp-hub-surface',
-      channels: [{ channel: 't1', componentId: 'hub-motor', quantity: 'temperature', unit: '°C', scale: 1, offset: 0 }],
-    },
+    // id/nome iguais ao DEVICE_ID do firmware — as mensagens chegam com "dev":"esp32-hub"
+    device: (({ createdAt: _c, status: _s, sampleValidityMs: _v, ...d }) => d)(gatewayDevice()),
   },
   {
     label: 'Sensor ESS no compartimento das baterias',

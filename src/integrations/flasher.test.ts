@@ -120,6 +120,11 @@ describe('confirmação após reiniciar', () => {
     expect(bootCheck(ok, 'esp32-gateway', '1.1.0')).toMatchObject({ ok: false, done: true });
     expect(bootCheck('entry 0x400805b4\n', 'esp32-gateway', '1.0.0')).toMatchObject({ ok: false, done: false });
   });
+  it('ignora a linha ainda incompleta (pedaço da serial)', () => {
+    const partial = 'entry 0x400805b4\n# fw name=esp32-gateway version=1.';
+    expect(bootCheck(partial, 'esp32-gateway', '1.1.0')).toMatchObject({ ok: false, done: false });
+    expect(bootCheck(`${partial}1.0 emgp=1\n`, 'esp32-gateway', '1.1.0')).toMatchObject({ ok: true, done: true });
+  });
   it('detecta pânico e brownout', () => {
     expect(bootCheck("Guru Meditation Error: Core  1 panic'ed", 'esp32-gateway', '1.0.0').problem).toMatch(/Guru/);
     expect(bootCheck('Brownout detector was triggered', 'esp32-gateway', '1.0.0').ok).toBe(false);
