@@ -18,7 +18,8 @@
     "scans:pull": "node scripts/pull-scans.mjs",
     "rules:deploy": "firebase deploy --only firestore:rules",
     "hw:flash": "tsx scripts/hw/flash.ts",
-    "hw:smoke": "tsx scripts/hw/smoke.ts"
+    "hw:smoke": "tsx scripts/hw/smoke.ts",
+    "hw:monitor": "tsx scripts/hw/monitor.ts"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.2",

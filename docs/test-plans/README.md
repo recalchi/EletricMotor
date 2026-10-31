@@ -11,7 +11,7 @@ camadas 3 e 4 são rodadas na bancada e registradas no PR (`.github/pull_request
 | 1 | Unitários | `npm test` | CI + local | domínio, protocolo EMGP, adaptadores, gravador de firmware (etapas, eFuses, partições, ETA, erros), bateria de testes do gateway |
 | 2 | Estáticos | `npm run lint` · `npm run build` | CI + local | ESLint, TypeScript estrito, build de produção |
 | 2b | Catálogo de firmware | parte de `npm test` (`firmware.catalog.test.ts`) | CI + local | versão do `.ino` = última do catálogo; cada arquivo em `public/firmware` confere SHA-256, MD5 e tamanho |
-| 3 | Bancada (hardware) | `npm run hw:smoke -- --port COM7` · `npm run hw:flash -- --port COM7 --mode app --version X.Y.Z --from A.B.C` | PC com o ESP32 no USB | boot sem pânico, versão anunciada, mensagens EMGP sem perda; atualização com o MESMO código do app |
+| 3 | Bancada (hardware) | `npm run hw:monitor -- --port COM7` (ao vivo, só escuta) · `npm run hw:smoke -- --port COM7` · `npm run hw:flash -- --port COM7 --mode app --version X.Y.Z --from A.B.C` | PC com o ESP32 no USB | boot sem pânico, versão anunciada, mensagens EMGP sem perda; atualização com o MESMO código do app |
 | 4 | Roteiro manual | ver abaixo | navegador e APK | telas, login, Bluetooth, APK no celular |
 | — | E2E | `npm run e2e` (antes: `npx playwright install chromium`) | local | login demo, simulador, Explorador 3D |
 
