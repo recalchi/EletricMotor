@@ -3,7 +3,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts/moto/ble-scan.ps1 -Fase base -Segundos 60
 # Fases sugeridas: base (moto desligada) · ligando (girar a chave) · ligada (painel aceso) · desligando.
 # Saída: hw-logs/moto/<AAAA-MM-DD>/ble-<fase>.jsonl (bruto, fica só no computador — hw-logs está no .gitignore).
-param([Parameter(Mandatory)][string]$Fase, [int]$Segundos = 60, [string]$Pasta)
+# -Classico: no fim também faz a busca de Bluetooth CLÁSSICO (~15–30 s; o tipo usado por painéis para música/chamadas).
+param([Parameter(Mandatory)][string]$Fase, [int]$Segundos = 60, [string]$Pasta, [switch]$Classico)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
@@ -24,5 +25,9 @@ if (-not (Test-Path $exe) -or (Get-Item $src).LastWriteTime -gt (Get-Item $exe).
 }
 Write-Host "Escutando Bluetooth LE ($Fase) por $Segundos s... (só recepção)" -ForegroundColor Cyan
 & $exe $Segundos $out $Fase
+if ($Classico) {
+  Write-Host "Buscando Bluetooth clássico ($Fase)... (só lista, não pareia)" -ForegroundColor Cyan
+  & $exe classico (Join-Path $Pasta "bt-classico-$Fase.jsonl") $Fase
+}
 $n = if (Test-Path $out) { (Get-Content $out | Measure-Object -Line).Lines } else { 0 }
 Write-Host "Pronto: $n anúncios em $out" -ForegroundColor Green

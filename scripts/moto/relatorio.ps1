@@ -71,6 +71,32 @@ function Lines($list, [bool]$public) {
   }
 }
 
+# ── Bluetooth clássico (painéis costumam usar para música/chamadas): o que surge com a moto ligada
+$cl = @(foreach ($f in Get-ChildItem $dir -Filter 'bt-classico-*.jsonl') { Get-Content $f.FullName -Encoding UTF8 | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json } })
+$cl = @($cl | Where-Object { $_.fase -notlike 'teste*' })
+$clLines = @()
+foreach ($g in ($cl | Group-Object addr)) {
+  $r = $g.Group; $fs = @($r.fase | Select-Object -Unique)
+  $name = ($r.name | Where-Object { $_ } | Select-Object -First 1); $major = ($r.major | Select-Object -First 1); $cod = ($r.cod | Select-Object -First 1)
+  $newOn = ($fs -notcontains 'base') -and @($fs | Where-Object { $_ -in 'ligando', 'ligada', 'pareamento' }).Count
+  $named = "$name" -match 'voltz|evs|moto|tft|dash|ev[-_ ]|audio|speaker|som'
+  if (($newOn -or $named) -and ($major -notin 'Phone', 'Computer' -or $named)) {
+    $clLines += [pscustomobject]@{ addr = $g.Name; name = $name; major = $major; cod = $cod; fases = ($fs -join ', '); pareado = [bool]($r.pareado -contains $true) }
+  }
+}
+$clOthers = @($cl.addr | Select-Object -Unique).Count - $clLines.Count
+function ClLines([bool]$public) {
+  if (-not $clLines) { return @("Nenhum aparelho clássico novo com a moto ligada ($clOthers outros descartados).", '') }
+  foreach ($c in $clLines) {
+    "- $(if ($public) { Mask $c.addr } else { $c.addr }) — **$($c.name)** · classe $($c.major) ($($c.cod))$(if ($c.major -eq 'AudioVideo') { ' → **provável caixa de som/áudio Bluetooth (A2DP)**' }) · fases: $($c.fases)$(if ($c.pareado) { ' · já pareado com o notebook' })"
+  }
+  ''
+}
+
+# ── Áudio: dispositivos de som vistos pelo notebook (audio-teste.ps1)
+$audioTxt = @(foreach ($f in Get-ChildItem $dir -Filter 'audio-*.json') { $a = Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+    "- **$($f.BaseName.Substring(6))**: saída padrão $($a.saida) · reproduziu: $($a.reproduziu) · dispositivos de áudio Bluetooth: $(@($a.bt) -join '; ')" })
+
 # ── USB: diferenças entre fotografias
 $usb = @{}
 foreach ($f in Get-ChildItem $dir -Filter 'usb-*.json') { $usb[$f.BaseName.Substring(4)] = @(Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json) }
@@ -88,11 +114,12 @@ $head = @("# Captura na moto — $Data", '', "Fases capturadas: $($fases -join '
   '> Somente recepção: nada foi conectado nem enviado a aparelhos da moto. Aparelhos que já estavam no ar com a moto',
   "> desligada não aparecem aqui ($others descartados por privacidade).", '')
 $body = @('## Candidatos da moto (Bluetooth LE)', '')
+$classicPart = { param([bool]$p) @('## Bluetooth clássico (música/chamadas do painel)', '') + (ClLines $p) + @('## Teste de áudio', '') + $(if ($audioTxt) { $audioTxt } else { '_(teste de áudio não feito)_' }) + @('') }
 $tail = @('## Nosso gateway', '', $(if ($ourDev) { "Faísca visto: $((($ourDev[0].per.Values | ForEach-Object { $_.rssiMax }) | Measure-Object -Maximum).Maximum) dBm de sinal máximo." } else { 'Não visto (normal se ficou em casa).' }), '',
   '## USB (dispositivos que apareceram no notebook)', '', $(if ($usbLines) { $usbLines } else { '_(sem fotografias USB)_' }), '', '## Notas do teste', '', $notasTxt)
 $none = @('Nenhum aparelho Bluetooth LE novo apareceu ao ligar a moto. Conclusão provável: a moto não anuncia Bluetooth LE', '(pode ainda ter Bluetooth clássico — confira a lista "dispositivos disponíveis" do celular nas notas).', '')
-$full = $head + $body + $(if ($cands) { Lines $cands $false } else { $none }) + $tail
-$pub = $head + $body + $(if ($cands) { Lines $cands $true } else { $none }) + $tail
+$full = $head + $body + $(if ($cands) { Lines $cands $false } else { $none }) + (& $classicPart $false) + $tail
+$pub = $head + $body + $(if ($cands) { Lines $cands $true } else { $none }) + (& $classicPart $true) + $tail
 Set-Content -Path (Join-Path $dir 'relatorio.md') -Value $full -Encoding UTF8
 $pubDir = Join-Path $root 'docs\vehicle-evidence\capturas'
 New-Item -ItemType Directory -Force $pubDir | Out-Null

@@ -9,6 +9,7 @@ import type { TelemetryAdapter } from '../../integrations/adapter';
 import { Button, Card, PageHeader, cx } from '../../shared/ui';
 import { DevicesPanel } from './DevicesPanel';
 import { GatewayBench } from './GatewayBench';
+import { MotoAudioCard } from './MotoAudioCard';
 import { TestConsole } from './TestConsole';
 
 const STATE_STYLE: Record<string, string> = {
@@ -56,6 +57,7 @@ export default function ConnectivityPage() {
         subtitle="Firebase não se conecta diretamente à moto. Toda leitura passa por um adaptador somente-leitura e por um dispositivo validado."
       />
       <GatewayBench />
+      <MotoAudioCard />
 
       <Card title="Fluxo de dados">
         <div className="flex flex-col gap-1.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">

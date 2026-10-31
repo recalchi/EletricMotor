@@ -1,5 +1,5 @@
 using System; using System.IO; using System.Text; using System.Threading; using System.Collections.Generic;
-using Windows.Devices.Bluetooth.Advertisement; using Windows.Storage.Streams;
+using Windows.Devices.Bluetooth; using Windows.Devices.Bluetooth.Advertisement; using Windows.Devices.Enumeration; using Windows.Storage.Streams;
 public static class EmBle {
   static string Hex(IBuffer b){ var r = DataReader.FromBuffer(b); var a = new byte[b.Length]; r.ReadBytes(a); return BitConverter.ToString(a).Replace("-",""); }
   static string J(string s){ return s == null ? "null" : "\"" + s.Replace("\\","\\\\").Replace("\"","\\\"") + "\""; }
@@ -29,4 +29,37 @@ public static class EmBle {
     return n;
   }
 }
-public static class Program { public static int Main(string[] a){ return EmBle.Run(int.Parse(a[0]), a[1], a[2]) >= 0 ? 0 : 1; } }
+public static class EmClassic {
+  // AsTask() exigiria a referência unificada "Windows"; espera simples pelo estado da operação basta aqui
+  static T Wait<T>(Windows.Foundation.IAsyncOperation<T> op){ while (op.Status == Windows.Foundation.AsyncStatus.Started) Thread.Sleep(50);
+    if (op.Status != Windows.Foundation.AsyncStatus.Completed) throw new Exception("busca falhou: " + op.Status); return op.GetResults(); }
+  static string J(string s){ return s == null ? "null" : "\"" + s.Replace("\\","\\\\").Replace("\"","\\\"") + "\""; }
+  // Busca de Bluetooth CLÁSSICO (o que o Windows faz em "Adicionar dispositivo"): só lista nomes e endereços
+  // anunciados; não pareia nem conecta. pareados=true lista os já pareados com este computador.
+  public static int Run(string path, string fase){
+    Console.OutputEncoding = Encoding.UTF8; int n = 0;
+    // não pareados: um DeviceWatcher dispara a busca de rádio (inquiry) por ~25 s; pareados: lista direta
+    var ids = new Dictionary<string, bool>(); object lk = new object();
+    var w = DeviceInformation.CreateWatcher(BluetoothDevice.GetDeviceSelectorFromPairingState(false));
+    w.Added += (s2, d) => { lock (lk) ids[d.Id] = false; };
+    w.Updated += (s2, u) => { };
+    w.Start(); Thread.Sleep(25000); try { w.Stop(); } catch { }
+    foreach (var d in Wait(DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true)))) ids[d.Id] = true;
+    using (var f = new StreamWriter(path, true, new UTF8Encoding(false))) {
+      foreach (var kv in ids) {
+        try {
+          var bd = Wait(BluetoothDevice.FromIdAsync(kv.Key)); if (bd == null) continue;
+          f.WriteLine("{\"t\":" + J(DateTime.Now.ToString("o")) + ",\"fase\":" + J(fase) + ",\"addr\":\"" + bd.BluetoothAddress.ToString("X12") +
+            "\",\"name\":" + J(bd.Name) + ",\"pareado\":" + (kv.Value ? "true" : "false") + ",\"cod\":\"0x" + bd.ClassOfDevice.RawValue.ToString("X6") +
+            "\",\"major\":" + J(bd.ClassOfDevice.MajorClass.ToString()) + "}");
+          n++;
+        } catch { }
+      }
+    }
+    Console.WriteLine("  Bluetooth clássico: " + n + " aparelho(s)");
+    return n;
+  }
+}
+public static class Program { public static int Main(string[] a){
+  if (a.Length > 0 && a[0] == "classico") return EmClassic.Run(a[1], a[2]) >= 0 ? 0 : 1;
+  return EmBle.Run(int.Parse(a[0]), a[1], a[2]) >= 0 ? 0 : 1; } }

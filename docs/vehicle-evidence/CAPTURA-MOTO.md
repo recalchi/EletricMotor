@@ -5,13 +5,32 @@
 > moto, **não** envia comandos a aparelhos da moto e **não** tenta ler/decodificar protocolos proprietários. A análise
 > e as atualizações do app ficam com a sessão principal (no PC), que lê o que você entregar.
 
-## Objetivo
+## Objetivo — três validações + painel e som
 Descobrir, sem tocar na moto, o que ela expõe e que poderia levar informações do painel (bateria %, velocidade, km,
-autonomia) para o app:
-1. **Bluetooth LE** — algum aparelho da moto (painel/TFT, BMS, controladora, trava) anuncia algo quando ela liga?
-2. **Bluetooth clássico** — o painel aparece para parear (pelo celular)?
-3. **Porta USB da moto** — só energia, ou troca dados?
-4. **O que o painel mostra** — a lista de grandezas que queremos espelhar no app (fotos + notas).
+autonomia) para o app — e se dá para usar a caixa de som pelo celular:
+1. **As duas portas USB da moto** — cada uma: só energia ou troca dados? (teste com o celular, nunca com o notebook)
+2. **Bluetooth LE** (notebook) — algum aparelho da moto (painel/TFT, BMS, controladora, módulo 4G) anuncia algo ao ligar?
+3. **Bluetooth clássico** (notebook + celular) — o painel aparece como aparelho de áudio/chamadas para parear?
+4. **Caixa de som** — pareada como caixa Bluetooth comum, toca o teste (e depois Spotify) pelo celular/notebook?
+5. **O que o painel mostra** — a lista de grandezas que queremos espelhar no app (fotos + notas).
+
+## O que já se sabe (pesquisa pública, 31/10/2026 — confirmar na moto)
+- **Painel TFT colorido com Bluetooth para o celular:** mostra música/álbum, chamadas, navegação, consumo da bateria em
+  tempo real, autonomia, 2 trips, modo de condução, temperatura, hora. Logo, o painel deve se anunciar para
+  pareamento — por isso há a fase **pareamento** e a busca de **Bluetooth clássico** (o tipo usado para áudio/chamadas).
+  Fontes: [Carpoint](https://www.carpointnews.com.br/avaliacao-voltz-evs-allblack/),
+  [TecMundo](https://www.tecmundo.com.br/transportes/240499-voltz-evs-tudo-moto-eletrica-brasileira.htm).
+- **Conectividade de fábrica:** GPS + 4G + Bluetooth e um "smart controller" que envia dados para a nuvem da Voltz;
+  o app oficial (Minha Voltz/Hello Voltz) mostrava carga, tempo para completar, **SoH, ciclos**, histórico, falhas,
+  localização da bateria, km total, autonomia, velocidade e ligar à distância.
+  Fonte: [Motociclismo Online](https://motociclismoonline.com.br/especiais/voltz-motors-cria-app-para-conectar-moto-ao-celular/).
+  A fabricante passou por dificuldades/falência ([Click Petróleo e Gás](https://en.clickpetroleoegas.com.br/brazilian-electric-motorcycle-once-promised-180-km-range-and-affordable-price-now-faces-uncertain-future-amid-delays-and-manufacturers-bankr-ctl01/)):
+  **verifique se o app oficial ainda funciona** — se sim, os dados da sua própria conta (prints) são uma fonte legítima
+  de SoH/ciclos para comparar com o nosso app.
+- **Tomadas USB:** a EVS Work é descrita com **duas tomadas USB** ([Motoo](https://www.motoo.com.br/voltz-motos-eletricas-evs-ev1-miles-preco-autonomia-ficha-tecnica/));
+  uma matéria cita "painel TFT com conexões USB e Bluetooth" ([Duas Rodas](https://www.revistaduasrodas.com.br/noticias/voltz-lanca-moto-eletrica-no-pais-por-r-15-900)).
+  Nenhuma fonte diz se trocam dados — por isso o teste com o celular em **cada uma**.
+- Ficha: bateria de lítio 72 V / 33,6 Ah / 2,45 kWh por módulo; motor 3 kW (7 kW pico).
 
 ## Segurança (obrigatório)
 - **Nunca ligue o notebook na entrada USB da moto.** A porta da moto fornece 5 V e a do notebook também: um cabo
@@ -19,6 +38,8 @@ autonomia) para o app:
   celular** com o cabo normal dele (ou um medidor USB).
 - Não abrir tampas, não desconectar chicotes, não mexer em bateria/BMS/controladora (alta tensão ~72 V).
 - Moto parada, no cavalete; não andar durante a captura.
+- Pareamento só pelo menu normal do celular/Windows, como qualquer caixa de som (uso previsto pelo fabricante). Não
+  usar ferramentas de invasão, não forçar PIN, não instalar firmware.
 - Só recepção: os scripts usam a escuta passiva do Windows; nada é transmitido para a moto.
 
 ## Privacidade
@@ -53,12 +74,14 @@ Rode cada comando, **avise o dono do que fazer antes** e espere ele confirmar. T
 
 | # | Dono faz | Agente roda |
 |---|---|---|
-| 0 | notebook a 1–2 m da moto; moto **desligada** | `powershell -ExecutionPolicy Bypass -File scripts/moto/usb-snapshot.ps1 -Fase antes` |
-| 1 | não mexe na moto (60 s) | `... scripts/moto/ble-scan.ps1 -Fase base -Segundos 60` |
+| 0 | notebook a 1–2 m da moto; moto **desligada**; **Bluetooth do celular desligado** (se ele já for pareado, o painel conecta nele e para de anunciar) | `powershell -ExecutionPolicy Bypass -File scripts/moto/usb-snapshot.ps1 -Fase antes` |
+| 1 | não mexe na moto (60 s + ~25 s de busca clássica) | `... scripts/moto/ble-scan.ps1 -Fase base -Segundos 60 -Classico` |
 | 2 | **liga a moto** logo depois de o comando começar (45 s) | `... scripts/moto/ble-scan.ps1 -Fase ligando -Segundos 45` |
-| 3 | moto ligada, painel aceso; pode navegar pelas telas do painel (120 s) | `... scripts/moto/ble-scan.ps1 -Fase ligada -Segundos 120` |
-| 4 | **desliga a moto** logo depois de o comando começar (30 s) | `... scripts/moto/ble-scan.ps1 -Fase desligando -Segundos 30` |
-| 5 | — | `... scripts/moto/usb-snapshot.ps1 -Fase depois` |
+| 3 | moto ligada, painel aceso; pode navegar pelas telas do painel (120 s) | `... scripts/moto/ble-scan.ps1 -Fase ligada -Segundos 120 -Classico` |
+| 4 | abre no painel o menu Bluetooth/conectar celular e deixa **procurando/visível** (90 s); sem menu, só espera | `... scripts/moto/ble-scan.ps1 -Fase pareamento -Segundos 90 -Classico` |
+| 5 | **teste de som** (opcional): Windows → Bluetooth → Adicionar dispositivo → pareia o nome da moto como caixa de som | `... scripts/moto/audio-teste.ps1 -Fase moto` (frase + 3 bipes; pergunta se saiu pela moto) |
+| 6 | **desliga a moto** logo depois de o comando começar (30 s) | `... scripts/moto/ble-scan.ps1 -Fase desligando -Segundos 30` |
+| 7 | — | `... scripts/moto/usb-snapshot.ps1 -Fase depois` |
 
 `...` = `powershell -ExecutionPolicy Bypass -File`. Os comandos param sozinhos no tempo indicado.
 
@@ -68,9 +91,15 @@ Copie `scripts/moto/notas-modelo.md` para `hw-logs/moto/<data>/notas.md` e preen
    ligado. O resultado vai para o Firestore da conta do dono (a sessão principal baixa com `npm run scans:pull`).
 2. **Bluetooth clássico:** Configurações de Bluetooth do celular → "dispositivos disponíveis" com a moto ligada. Anote os
    nomes que aparecem (não parear nada).
-3. **Porta USB da moto:** plugar o **celular** com o cabo normal. Anote se só carrega ou se aparece "Transferir
-   arquivos / USB conectado a…". Se houver medidor USB, anote tensão, corrente e protocolo.
-4. **Painel:** liste tudo o que ele mostra (bateria %, velocidade, km, autonomia, modos, ícones — inclusive ícone de
+3. **As duas portas USB da moto (uma de cada vez):** plugar o **celular** com o cabo normal (que transfere dados) com a
+   moto ligada. Para **cada porta** anote: onde fica, tipo (USB-A/USB-C), se o celular só carrega ou se aparece
+   "Transferir arquivos / USB conectado a… / Android Auto" e a velocidade de carga que o celular indica. Com medidor
+   USB: tensão, corrente e protocolo (QC/PD). Se alguma porta mostrar opções de dados, **não** escolha nada e só anote.
+4. **Som pelo celular:** depois de o notebook terminar, ligue o Bluetooth do celular, pareie com a moto (como caixa
+   de som) e, no APK, Conectividade → **Som da moto → Tocar som de teste**; depois teste o Spotify. Anote se saiu som,
+   a qualidade e se o volume do celular controla.
+5. **App oficial:** se ainda tiver o app Minha Voltz/Hello Voltz, abra e anote se funciona (prints na pasta do OneDrive).
+6. **Painel:** liste tudo o que ele mostra (bateria %, velocidade, km, autonomia, modos, ícones — inclusive ícone de
    Bluetooth) e os valores no momento. Tire fotos do painel ligado, das etiquetas e da porta USB.
 
 ## Relatório e entrega pela nuvem
