@@ -50,76 +50,120 @@ ou da bateria (72 V).</p>
 </section>
 
 <section><h2>Etapa B — o ESP32 como “cabo USB‑serial” (só se a etapa A mandar)</h2>
-<svg viewBox="0 0 680 430" role="img" aria-label="Montagem: ESP32 com EN no GND, divisor de resistores e conector da moto">
+<svg viewBox="0 0 680 590" role="img" aria-label="Montagem na protoboard: ESP32 com EN no GND, divisor R1 e R2 e conector da moto">
+  <defs>
+    <pattern id="furo" x="38" y="0" width="24" height="18" patternUnits="userSpaceOnUse"><rect x="9" y="0" width="5" height="5" fill="#9C9A92"/></pattern>
+  </defs>
   <!-- placa ESP32 (38 pinos) -->
-  <rect x="20" y="20" width="430" height="140" rx="8" fill="#1F2933"/>
-  <rect x="150" y="50" width="110" height="80" rx="4" fill="#B4B2A9"/>
-  <text x="205" y="95" font-size="13" fill="#2C2C2A" text-anchor="middle">ESP-32</text>
-  <rect x="428" y="77" width="30" height="26" rx="4" fill="#888780"/>
-  <text x="420" y="94" font-size="12" fill="#D3D1C7" text-anchor="end">USB → notebook</text>
+  <rect x="20" y="10" width="430" height="140" rx="8" fill="#1F2933"/>
+  <rect x="150" y="40" width="110" height="80" rx="4" fill="#B4B2A9"/>
+  <text x="205" y="85" font-size="13" fill="#2C2C2A" text-anchor="middle">ESP-32</text>
+  <rect x="428" y="67" width="30" height="26" rx="4" fill="#888780"/>
+  <text x="420" y="84" font-size="12" fill="#D3D1C7" text-anchor="end">USB → notebook</text>
   <g fill="#BA7517">
-    <rect x="37" y="26" width="7" height="7"/><rect x="62" y="26" width="7" height="7"/><rect x="87" y="26" width="7" height="7"/>
-    <rect x="112" y="26" width="7" height="7"/><rect x="137" y="26" width="7" height="7"/>
-    <rect x="37" y="147" width="7" height="7"/><rect x="62" y="147" width="7" height="7"/><rect x="87" y="147" width="7" height="7"/>
+    <rect x="37" y="16" width="7" height="7"/><rect x="62" y="16" width="7" height="7"/><rect x="87" y="16" width="7" height="7"/>
+    <rect x="112" y="16" width="7" height="7"/><rect x="137" y="16" width="7" height="7"/>
+    <rect x="37" y="137" width="7" height="7"/><rect x="62" y="137" width="7" height="7"/><rect x="87" y="137" width="7" height="7"/>
   </g>
   <g font-size="11" fill="#F1EFE8" text-anchor="middle">
-    <text x="40" y="46">GND</text><text x="65" y="46">23</text><text x="90" y="46">22</text>
-    <text x="115" y="46" font-weight="700" fill="#FAC775">TX</text><text x="140" y="46">RX</text>
-    <text x="40" y="141">3V3</text><text x="65" y="141" font-weight="700" fill="#FAC775">EN</text><text x="90" y="141">VP</text>
+    <text x="40" y="36">GND</text><text x="65" y="36">23</text><text x="90" y="36">22</text>
+    <text x="115" y="36" font-weight="700" fill="#FAC775">TX</text><text x="140" y="36">RX</text>
+    <text x="40" y="131">3V3</text><text x="65" y="131" font-weight="700" fill="#FAC775">EN</text><text x="90" y="131">VP</text>
   </g>
-  <text x="235" y="38" font-size="11" fill="#D3D1C7">fileira de cima: GND é o 1º, TX o 4º</text>
-  <text x="120" y="152" font-size="11" fill="#D3D1C7">fileira de baixo: EN é o 2º</text>
+  <text x="270" y="28" font-size="11" fill="#D3D1C7">um lado: GND 1º, TX 4º</text>
+  <text x="110" y="142" font-size="11" fill="#D3D1C7">outro lado: EN 2º</text>
 
-  <!-- protoboard -->
-  <rect x="20" y="230" width="430" height="120" rx="6" fill="#F1EFE8" stroke="#B4B2A9"/>
-  <g fill="#B4B2A9">
-    <rect x="66" y="245" width="6" height="90"/><rect x="186" y="245" width="6" height="90"/><rect x="306" y="245" width="6" height="90"/>
+  <!-- protoboard comum (830 furos): trilhas +/− nas bordas, colunas numeradas de 5 furos -->
+  <rect x="20" y="190" width="640" height="300" rx="6" fill="#F4F2EC" stroke="#B4B2A9"/>
+  <line x1="40" y1="203" x2="640" y2="203" stroke="#E24B4A" stroke-width="1.5"/>
+  <line x1="40" y1="242" x2="640" y2="242" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="30" y="217" font-size="11" fill="#E24B4A" text-anchor="middle">+</text>
+  <text x="30" y="233" font-size="13" fill="#185FA5" text-anchor="middle">−</text>
+  <!-- trilha azul (−) = GND inteira -->
+  <rect x="38" y="210" width="600" height="27" fill="#E6F1FB"/>
+  <g transform="translate(0,211)"><rect x="38" y="0" width="600" height="23" fill="url(#furo)"/></g>
+  <!-- colunas destacadas: 10 = SINAL, 15 = TX -->
+  <rect x="257" y="254" width="20" height="90" rx="3" fill="#E1F5EE"/>
+  <rect x="377" y="254" width="20" height="90" rx="3" fill="#FAEEDA"/>
+  <g transform="translate(0,258)"><rect x="38" y="0" width="600" height="90" fill="url(#furo)"/></g>
+  <rect x="38" y="350" width="600" height="14" fill="#E8E6DF"/>
+  <g transform="translate(0,372)"><rect x="38" y="0" width="600" height="90" fill="url(#furo)"/></g>
+  <g font-size="10" fill="#5F5E5A" text-anchor="middle">
+    <text x="50" y="252">1</text><text x="146" y="252">5</text><text x="266" y="252" font-weight="700" fill="#0F6E56">10</text>
+    <text x="386" y="252" font-weight="700" fill="#854F0B">15</text><text x="506" y="252">20</text><text x="626" y="252">25</text>
   </g>
-  <g font-size="12" fill="#444441" text-anchor="middle">
-    <text x="69" y="368">coluna GND</text><text x="189" y="368">coluna TX</text><text x="309" y="368">coluna SINAL</text>
+  <g font-size="10" fill="#5F5E5A" text-anchor="end">
+    <text x="34" y="264">a</text><text x="34" y="282">b</text><text x="34" y="300">c</text><text x="34" y="318">d</text><text x="34" y="336">e</text>
+    <text x="34" y="378">f</text><text x="34" y="450">j</text>
   </g>
-  <!-- R1 série SINAL→TX -->
-  <path d="M309 270 H274" stroke="#5F5E5A" stroke-width="2" fill="none"/><rect x="234" y="263" width="40" height="14" rx="6" fill="#D85A30"/>
-  <path d="M234 270 H189" stroke="#5F5E5A" stroke-width="2" fill="none"/>
-  <text x="254" y="258" font-size="12" fill="#993C1D" text-anchor="middle">R1</text>
-  <!-- R2+R3 TX→GND -->
-  <path d="M189 310 H160" stroke="#5F5E5A" stroke-width="2" fill="none"/><rect x="128" y="303" width="32" height="14" rx="6" fill="#D85A30"/>
-  <path d="M128 310 H118" stroke="#5F5E5A" stroke-width="2" fill="none"/><rect x="86" y="303" width="32" height="14" rx="6" fill="#D85A30"/>
-  <path d="M86 310 H69" stroke="#5F5E5A" stroke-width="2" fill="none"/>
-  <text x="122" y="298" font-size="12" fill="#993C1D" text-anchor="middle">R2 + R3 (só se ~5 V)</text>
+  <text x="340" y="480" font-size="11" fill="#888780" text-anchor="middle">metade de baixo (f–j) não é usada</text>
 
-  <!-- jumpers -->
-  <path d="M40 30 C 10 120, 20 200, 69 250" stroke="#2C2C2A" stroke-width="3" fill="none"/>
-  <text x="2" y="200" font-size="11" fill="#2C2C2A">J1</text>
-  <path d="M65 151 C 60 190, 66 220, 69 255" stroke="#534AB7" stroke-width="3" fill="none"/>
-  <text x="75" y="200" font-size="11" fill="#534AB7">J2 (EN→GND)</text>
-  <path d="M115 30 C 200 -10, 480 40, 470 150 C 465 210, 230 200, 189 250" stroke="#EF9F27" stroke-width="3" fill="none"/>
-  <text x="474" y="130" font-size="11" fill="#BA7517">J4 (TX)</text>
+  <!-- R1: c10 → c15 -->
+  <path d="M268 297 V288 H306 M346 288 H388 V297" stroke="#5F5E5A" stroke-width="2" fill="none"/>
+  <rect x="306" y="281" width="40" height="14" rx="6" fill="#D85A30"/>
+  <text x="326" y="278" font-size="12" font-weight="700" fill="#993C1D" text-anchor="middle">R1</text>
+  <!-- R2: a15 → trilha azul (coluna 19) -->
+  <path d="M388 261 V250 C 400 246, 410 246, 420 246 M456 246 H484 V231" stroke="#5F5E5A" stroke-width="2" fill="none"/>
+  <rect x="420" y="239" width="36" height="14" rx="6" fill="#D85A30"/>
+  <circle cx="484" cy="231" r="3" fill="#5F5E5A"/><circle cx="388" cy="261" r="3" fill="#5F5E5A"/>
+  <circle cx="268" cy="297" r="3" fill="#5F5E5A"/><circle cx="388" cy="297" r="3" fill="#5F5E5A"/>
+  <text x="438" y="268" font-size="12" font-weight="700" fill="#993C1D" text-anchor="middle">R2</text>
+
+  <!-- jumpers do ESP32 -->
+  <path d="M40 20 C 5 60, 5 180, 76 231" stroke="#2C2C2A" stroke-width="3" fill="none"/>
+  <circle cx="76" cy="231" r="4" fill="#2C2C2A"/>
+  <text x="4" y="176" font-size="11" fill="#2C2C2A">J1</text>
+  <path d="M65 141 C 70 170, 110 190, 124 231" stroke="#534AB7" stroke-width="3" fill="none"/>
+  <circle cx="124" cy="231" r="4" fill="#534AB7"/>
+  <text x="104" y="174" font-size="11" fill="#534AB7">J2 (EN)</text>
+  <path d="M115 20 C 200 -20, 490 20, 470 120 C 455 190, 400 220, 388 315" stroke="#EF9F27" stroke-width="3" fill="none"/>
+  <circle cx="388" cy="315" r="4" fill="#EF9F27"/>
+  <text x="474" y="120" font-size="11" fill="#BA7517">J4 (TX) → d15</text>
+
+  <!-- ponto de medida -->
+  <circle cx="388" cy="333" r="7" fill="none" stroke="#185FA5" stroke-width="2"/>
+  <text x="400" y="340" font-size="11" fill="#185FA5">medir e15 ↔ trilha azul: ~2,85 V</text>
 
   <!-- conector da moto -->
-  <rect x="560" y="250" width="80" height="50" rx="4" fill="#2C2C2A"/>
-  <text x="600" y="320" font-size="12" fill="#444441" text-anchor="middle">conector da moto</text>
-  <circle cx="577" cy="275" r="7" fill="#EFC000"/><circle cx="600" cy="275" r="7" fill="#1D9E75"/><circle cx="623" cy="275" r="7" fill="#888780"/>
-  <text x="577" y="244" font-size="11" fill="#444441" text-anchor="middle">am.</text><text x="600" y="244" font-size="11" fill="#444441" text-anchor="middle">vd.</text><text x="623" y="244" font-size="11" fill="#444441" text-anchor="middle">pt.</text>
-  <path d="M69 340 C 120 410, 600 410, 623 282" stroke="#2C2C2A" stroke-width="3" fill="none"/>
-  <text x="460" y="402" font-size="11" fill="#2C2C2A">J3 (GND → preto)</text>
-  <path d="M309 255 C 380 200, 560 200, 577 268" stroke="#BA7517" stroke-width="3" fill="none" stroke-dasharray="7 4"/>
-  <text x="420" y="214" font-size="11" fill="#BA7517">J5 (sinal: amarelo OU verde)</text>
+  <rect x="470" y="520" width="90" height="44" rx="4" fill="#2C2C2A"/>
+  <circle cx="490" cy="542" r="7" fill="#EFC000"/><circle cx="515" cy="542" r="7" fill="#1D9E75"/><circle cx="540" cy="542" r="7" fill="#888780"/>
+  <text x="515" y="582" font-size="12" fill="#444441" text-anchor="middle">conector da moto (amarelo fica livre)</text>
+  <path d="M268 333 C 260 520, 470 500, 515 535" stroke="#1D9E75" stroke-width="3" fill="none"/>
+  <circle cx="268" cy="333" r="4" fill="#1D9E75"/>
+  <text x="190" y="520" font-size="11" fill="#0F6E56">J5: e10 → VERDE</text>
+  <path d="M604 231 C 670 240, 670 520, 540 535" stroke="#2C2C2A" stroke-width="3" fill="none"/>
+  <circle cx="604" cy="231" r="4" fill="#2C2C2A"/>
+  <text x="635" y="508" font-size="11" fill="#2C2C2A" text-anchor="end">J3: trilha azul → PRETO</text>
 </svg>
-<p class="b">Coluna da protoboard = mesmo fio. R1, R2 e R3 são <b>do mesmo valor</b>, qualquer um entre 1 kΩ e 10 kΩ
-(os de 4,7 kΩ do sensor servem). R1 em série + R2/R3 em série até o GND baixa 5 V para 3,3 V.</p>
+<p class="ok"><b>Etapa A conferida (01/11):</b> amarelo 0 V desligada e ligada · verde 0 V desligada →
+<b>5,70 V ligada, parado</b>. O verde só acende com a moto ligada, e 5,7 V parado é o jeito de uma saída serial
+de 5 V em repouso. Pode ser também uma alimentação de 5 V para acessório, e o teste B vai dizer qual das duas.
+O amarelo em 0 V deve ser a entrada da controladora (RX) e <b>fica livre</b>: nada é ligado nele.</p>
+<p class="warn"><b>5,7 V é demais para o ESP32</b>, que aceita no máximo 3,6 V. Com o divisor <b>R1 + R2</b>
+(dois resistores <b>iguais</b>), chega metade da tensão ao pino TX: 5,7 V vira ~2,85 V, e mesmo se a linha
+subir a 6 V fica em 3,0 V. Use dois resistores iguais de 4,7 kΩ a 10 kΩ (10 kΩ carrega menos a linha). O R3 não
+entra: com R2 + R3 sobrariam 3,8 V, acima do limite.</p>
+<p class="info"><b>Como a protoboard funciona.</b> Na protoboard comum (branca, com números 1…63 e letras a…j), os
+<b>5 furos de cada número</b> (a, b, c, d, e) são ligados por dentro. A <b>trilha azul (−)</b> da borda é ligada de
+ponta a ponta, e é ela que será o GND. Os números do desenho são só exemplo: serve qualquer coluna livre, desde que
+<b>R1 e o fio verde (J5) fiquem numa coluna</b> e <b>R1, R2 e o TX (J4) fiquem na outra</b>. Se o ESP32 estiver espetado na
+protoboard, use colunas longe dele e ligue os pinos com jumpers fêmea‑macho. Os resistores não têm lado.</p>
 <ol>
   <li><b>Notebook só na bateria</b> (tire o carregador da tomada). ESP32 no notebook pelo cabo USB de dados.</li>
-  <li><b>J1:</b> pino <b>GND</b> da placa (1º da fileira de cima) → coluna GND.</li>
-  <li><b>J2:</b> pino <b>EN</b> (2º da fileira de baixo) → coluna GND. O LED azul/Bluetooth apaga: o chip parou e o pino TX
-    passa a ser a entrada do notebook. (Tirar o J2 = gateway volta ao normal.)</li>
-  <li><b>J4:</b> pino <b>TX</b> (4º da fileira de cima) → coluna TX.</li>
-  <li><b>R1</b> entre a coluna SINAL e a coluna TX. <b>R2 + R3</b> (em série) entre a coluna TX e a coluna GND —
-    <b>só se a linha mediu ~4–5,5 V</b>; se mediu ~3–3,6 V, deixe sem R2/R3.</li>
-  <li><b>Moto desligada.</b> <b>J3:</b> coluna GND → pino <b>preto</b> do conector. <b>J5:</b> coluna SINAL → pino da linha
-    que a etapa A indicou (<b>amarelo ou verde</b>). O outro pino fica livre.</li>
-  <li><b>Ligue a moto</b> e me avise: eu rodo <code>scripts/moto/uart-sniff.ps1</code>, que escuta 8 velocidades
-    (115200, 9600, 19200…) e guarda os bytes. Depois desligue a moto, passe o J5 para o outro fio e repetimos.</li>
+  <li><b>J1:</b> pino <b>GND</b> do ESP32 → qualquer furo da <b>trilha azul (−)</b>.</li>
+  <li><b>J2:</b> pino <b>EN</b> do ESP32 → outro furo da <b>trilha azul (−)</b>. O LED/Bluetooth apaga: o chip parou e o pino TX
+    passa a ser a entrada do notebook. Tirando o J2, o gateway volta ao normal.</li>
+  <li><b>R1:</b> uma perna no furo <b>c10</b>, a outra no <b>c15</b>.</li>
+  <li><b>R2:</b> uma perna no furo <b>a15</b>, a outra na <b>trilha azul (−)</b>.</li>
+  <li><b>Ainda sem o J4.</b> Com a <b>moto desligada</b>, ligue o <b>J3</b> (trilha azul → pino <b>preto</b> do conector) e o
+    <b>J5</b> (furo <b>e10</b> → pino <b>verde</b>). Não ligue nada no amarelo.</li>
+  <li><b>Conferência com o multímetro:</b> ligue a moto. Ponta preta na <b>trilha azul</b>, ponta vermelha no furo <b>e15</b>
+    (o círculo azul do desenho). Deve dar <b>~2,8–3,0 V</b>.
+    <b>Se passar de 3,3 V, pare</b>: os resistores não são iguais ou estão no furo errado. Desligue a moto.</li>
+  <li>Moto desligada: ligue o <b>J4</b> (pino <b>TX</b> do ESP32 → furo <b>d15</b>).</li>
+  <li><b>Ligue a moto</b> e me avise: eu rodo <code>scripts/moto/uart-sniff.ps1 -Fase verde-ligada</code>. Ele escuta 8 velocidades
+    (115200, 9600, 19200…) e guarda os bytes. Se der para fazer com segurança, gire o acelerador de leve com a roda
+    no ar, ou ao menos acenda o farol e a seta, para os números mudarem.</li>
 </ol>
 </section>
 
@@ -150,11 +194,14 @@ function veredito() {
   if (!vivo.length) { el.className = 'info'; el.innerHTML = 'As duas linhas ficam perto de 0 V: provavelmente <b>entrada de acessório</b> (a moto espera sinal, não envia). Me mande os números; a etapa B quase certamente não vai mostrar dados.'; return; }
   const [nome, v, f] = vivo[0];
   const vv = v.toFixed(1).replace('.', ',');
-  const div = v >= 3.8 ? 'com <b>R2 + R3</b> (divisor, porque a linha tem ~' + vv + ' V)' : 'só com <b>R1</b> (sem R2/R3, a linha tem ~' + vv + ' V)';
+  const div = v >= 3.8 ? 'com o divisor <b>R1 + R2</b> iguais (a linha tem ~' + vv + ' V e chegam ~' + (v / 2).toFixed(2).replace('.', ',') + ' V ao TX)' : 'só com <b>R1</b> (sem R2, a linha tem ~' + vv + ' V)';
   el.className = 'ok';
   el.innerHTML = 'Linha com tensão: <b>' + nome + '</b>' + (f === 't' ? ' e <b>tremendo</b> — forte sinal de dados saindo.' : (f === 'p' ? ' (parada — pode ser serial em repouso ou alimentação de 5 V; o teste diz).' : '.')) +
     '<br>Faça a <b>etapa B</b> ' + div + ', com o J5 no <b>' + nome + '</b>.';
 }
 document.querySelectorAll('input,select').forEach(e => e.addEventListener('input', veredito));
+// medidas da etapa A feitas em 01/11/2026
+Object.entries({ ay0: '0', ay1: '0', ag0: '0', ag1: '5,70', fy: 'p', fg: 'p' }).forEach(([k, v]) => document.getElementById(k).value = v);
+veredito();
 </script>
 </body></html>
