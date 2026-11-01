@@ -25,6 +25,14 @@ const insp = (label: string, value: string): Spec => ({
   evidence: 'inspecao',
   source: 'Inspeção do proprietário (29/10/2026)',
 });
+/** Captura por recepção na moto (notebook + celular; nada enviado à moto) — docs/vehicle-evidence/capturas. */
+const cap = (label: string, value: string, note?: string): Spec => ({
+  label,
+  value,
+  evidence: 'inspecao',
+  source: 'Captura na moto (01/11/2026)',
+  note,
+});
 const unk = (label: string, note?: string): Spec => ({
   label,
   value: '—',
@@ -266,7 +274,11 @@ export const CATALOG: VehicleComponent[] = [
     function: 'Proteção, balanceamento e medição das células.',
     specs: [
       insp('Posição', 'Topo da bateria (parte superior), não na lateral'),
-      unk('Interface de comunicação (CAN/UART/BLE?)', 'NÃO presumir. Investigar documentação.'),
+      unk(
+        'Interface de comunicação (CAN/UART/BLE?)',
+        'NÃO presumir. Na captura de 01/11/2026 há um BLE "EVS" sempre ligado (serviços 0xFFF0/0xFFB0) que pode ' +
+          'ser smart controller, BMS ou painel — não identificado.',
+      ),
     ],
   }),
   c({
@@ -321,12 +333,60 @@ export const CATALOG: VehicleComponent[] = [
     group: 'eletronica',
     description: 'Painel de instrumentos digital.',
     function: 'Exibe velocidade, odômetro, nível de bateria, modos e avisos.',
-    specs: [hyp('Conectividade', 'Bluetooth/app', PRANCHA(1), 'Não verificado; não presumir API.')],
+    specs: [
+      cap(
+        'Bluetooth clássico',
+        '"VOLTZ" — áudio/chamadas (A2DP, HFP, AVRCP; classe 0x240408)',
+        'Pareia como fone; áudio enviado não saiu audível na moto.',
+      ),
+      cap(
+        'Bluetooth LE',
+        '"EVS" conectável, serviços 0xFFF0 e 0xFFB0, anúncio fixo',
+        'Anuncia igual com a moto desligada ou ligada: bateria/km não vão no anúncio. Dados, se houver, ficam atrás ' +
+          'de conexão GATT — só com decisão do dono (nível 5 do roteiro).',
+      ),
+    ],
     signals: [
       sig('odometer', 'km', 'a_investigar', 'Leitura visual → registro manual.'),
       sig('speed', 'km/h', 'a_investigar'),
     ],
     coverage: 'inspecao_manual',
+  }),
+  c({
+    id: 'usb-ports',
+    name: 'Tomadas USB',
+    group: 'eletronica',
+    description: 'Duas tomadas USB: uma no guidão e outra no compartimento interno, perto da bateria.',
+    function: 'Carga de celular; a do guidão também liga ao módulo de áudio.',
+    specs: [
+      cap(
+        'Tomada do guidão',
+        'Troca dados: módulo de áudio JieLi BR21 (placa de som USB + leitor sem mídia + teclas de mídia)',
+        'Áudio enviado por ela não saiu audível. Não traz dados de bateria/velocidade.',
+      ),
+      cap(
+        'Tomada do compartimento (etiqueta "E6110 BX2 BigCat")',
+        'Nenhum aparelho USB visto pelo notebook',
+        'Pode ser só carga ou ser host; falta o teste com o celular.',
+      ),
+    ],
+    coverage: 'inspecao_manual',
+    mesh3d: false,
+  }),
+  c({
+    id: 'telematics',
+    name: 'Módulo 4G / rastreador (provável)',
+    group: 'eletronica',
+    description: 'Módulo de conectividade de fábrica (GPS + 4G) que enviava dados à nuvem da fabricante.',
+    function: 'Telemetria do app oficial; sem uso pelo EletricMotor.',
+    specs: [
+      cap(
+        'Bluetooth LE',
+        'Nome "z" + número de 15 dígitos (formato de IMEI), serviço 0xFFF0, dados fixos',
+        'Dois desses foram vistos — confirmar se o segundo é de outra moto. O número não vai para o repositório.',
+      ),
+    ],
+    mesh3d: false,
   }),
   c({
     id: 'throttle',
@@ -460,9 +520,15 @@ export const CATALOG: VehicleComponent[] = [
       },
       {
         label: 'Firmware',
-        value: 'esp32-gateway 1.0.0 (EMGP v1)',
+        value: 'esp32-gateway 1.3.0 (EMGP v1)',
         evidence: 'inspecao',
-        source: 'Gravação verificada por hash + anúncio "# fw" no boot (29/10/2026)',
+        source: 'Gravação verificada por MD5 do chip + anúncio "# fw" no boot (01/11/2026)',
+      },
+      {
+        label: 'Sensor de temperatura (t1)',
+        value: 'DS18B20 28-E53ADD1E64FF no GPIO4 + 4,7 kΩ',
+        evidence: 'inspecao',
+        source: 'Bancada (01/11/2026): 26,8 → 34 °C na mão e volta, 200 leituras',
       },
       unk('Fixação e alimentação na moto', 'Bateria própria ou 12 V auxiliar com fusível — nunca da alta tensão.'),
     ],

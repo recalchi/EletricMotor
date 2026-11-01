@@ -15,8 +15,11 @@ A versão viva está na aplicação (Manual Técnico → Matriz de evidências),
 | Balança traseira | mono/bibraço | **conflito** | Pranchas divergem | Inspecionar |
 | Dimensões | ≈ 2.020 × 780 × 1.070–1.100 mm | hipótese | Pranchas (vistas técnicas) | Altura diverge |
 | Pneu dianteiro | 110/70 R17 | hipótese | Prancha 2 | Ler flanco do pneu |
-| Painel TFT com Bluetooth/app | — | hipótese | Pranchas | Não presumir API |
-| Interface BMS/controladora (CAN/UART/BLE) | — | não verificado | — | **Não presumir** |
+| Painel TFT com Bluetooth/app | BT clássico "VOLTZ" (A2DP/HFP/AVRCP) + BLE "EVS" (0xFFF0/0xFFB0) | inspeção | [Captura 01/11/2026](capturas/2026-11-01.md) | Áudio enviado não saiu audível; anúncio BLE fixo, sem dados |
+| Interface BMS/controladora (CAN/UART/BLE) | BLE "EVS" sempre ligado — dono não identificado | não verificado | Captura 01/11/2026 | **Não presumir**; dados só via conexão GATT (nível 5, decisão do dono) |
+| Tomada USB do guidão | Troca dados: áudio JieLi BR21 (som USB + leitor + teclas de mídia) | inspeção | Captura 01/11/2026 | Sem dados de bateria/velocidade |
+| Tomada USB do compartimento | Nenhum aparelho visto pelo notebook | inspeção (parcial) | Captura 01/11/2026 | Falta teste com o celular |
+| Módulo 4G/rastreador | BLE "z"+IMEI, serviço 0xFFF0 | inspeção | Captura 01/11/2026 | Provável telemetria de fábrica |
 | Posição da controladora | — | não verificado | Pranchas divergem | — |
 | Carregador on-board | — | não verificado | Prancha 2 | — |
 

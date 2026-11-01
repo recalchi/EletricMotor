@@ -61,6 +61,32 @@ Regras para essas camadas:
   Fardriver, Votol…), e aí o protocolo já costuma estar documentado.
 - Logs HCI, APK e capturas brutas **nunca** vão para o git; só as conclusões, sem endereços.
 
+## Resultado da 1ª captura (01/11/2026) e rodada 2
+Relatório público: [capturas/2026-11-01.md](capturas/2026-11-01.md). Resumo:
+- **Tomada USB do guidão:** troca dados — é o módulo de áudio **JieLi BR21** (placa de som USB + leitor de cartão
+  sem mídia + teclas de mídia). Não traz bateria/velocidade.
+- **Tomada USB do compartimento** (etiqueta "E6110 BX2 BigCat"): o notebook não viu nenhum aparelho — falta o celular.
+- **Bluetooth clássico "VOLTZ":** pareia como fone (A2DP/HFP/AVRCP), mas o som enviado **não saiu** na moto (nem
+  por USB). O bipe de ligar pode vir de um buzzer do painel, e não de uma caixa de som.
+- **BLE "EVS"** (serviços 0xFFF0/0xFFB0) e **2 módulos "z"+IMEI** (provável 4G): anunciam **igual** com a moto ligada
+  ou desligada — nenhum dado sai no anúncio. Company IDs 0x3152 e 0x3130 não são de fabricante registrado (são
+  texto ASCII "R1" e "10"), típico de módulos genéricos.
+- Na 1ª captura o notebook foi ligado às tomadas da moto (fora do roteiro). Deu certo, mas **na rodada 2 o teste de
+  tomada é com o celular**.
+
+Rodada 2 (curta, ~20 min, com o celular; o notebook só se for refazer o áudio):
+1. **Tomada do compartimento com o celular:** só carrega, ou o celular mostra opções de USB/aparece algo? Anote.
+2. **Som:** com o celular pareado em "VOLTZ", toque música e **aperte o volume + do celular até o máximo** (o
+   volume do módulo é separado do volume do Windows). Procure no painel uma tela/menu de **música** e abra-a.
+   Ouça perto da moto inteira (pode haver alto-falante escondido). Anote se ao parear sai algum **tom de
+   "conectado"** — se sair, existe alto-falante ligado ao módulo.
+3. **App oficial + log HCI** (nível 3): se o app ainda abrir, siga o passo 5 de "Testes com o celular". É a
+   melhor chance de saber o que o "EVS" transmite.
+4. **Celular → Scanner do APK** com "Enviar para a nuvem" (não houve scan do celular na 1ª captura).
+5. **Nível 5 (só se o dono decidir):** no celular, app **nRF Connect** → conectar em "EVS" → **apenas listar**
+   serviços e características (não tocar em "Write", não ativar notificações) e tirar print. Isso só lê a lista;
+   nada é gravado na moto. Sem a decisão explícita do dono, pule.
+
 ## Segurança (obrigatório)
 - **Nunca ligue o notebook na entrada USB da moto.** A porta da moto fornece 5 V e a do notebook também: um cabo
   entre as duas põe duas fontes em conflito e pode queimar uma das portas. Para testar a porta da moto use **o
