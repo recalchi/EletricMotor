@@ -13,7 +13,7 @@ import { create } from 'zustand';
 import { live } from './liveLog';
 
 /** Igual ao versionName do APK (android/app/build.gradle) — um teste confere. */
-export const APP_VERSION = '0.8.7';
+export const APP_VERSION = '0.8.8';
 
 // ───────────────────────── Registro de erros
 

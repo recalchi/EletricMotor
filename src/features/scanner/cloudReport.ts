@@ -1,4 +1,4 @@
-import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { auth, db } from '../../data/firebase';
 import {
   APP_VERSION,
@@ -112,8 +112,11 @@ export async function uploadScanReport(note?: string): Promise<UploadResult> {
   const ref = doc(db, 'users', uid, 'scans', scanId);
   // Firestore aceita até 500 operações por lote; pedaços grandes vão em lotes menores
   // Falha com o código real do Firestore e os tamanhos (antes só "sem permissão", sem pista da causa)
-  const fail = (e: unknown): never => {
+  const fail = async (e: unknown): Promise<never> => {
     const code = (e as { code?: string }).code ?? 'erro';
+    // A regra só permite criar: reenviar o mesmo scan dá permission-denied — se já está lá, não é erro
+    if (code === 'permission-denied' && (await getDoc(ref).catch(() => null))?.exists())
+      throw new Error('Este scan já está na nuvem — não precisa reenviar.');
     throw new Error(`${code} · payload ${Math.round(payloadJson.length / 1024)} KB · ${chunks.length} parte(s) · ${e instanceof Error ? e.message : String(e)}`);
   };
   const first = writeBatch(db);

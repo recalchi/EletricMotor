@@ -43,7 +43,7 @@ function CloudUpload() {
         err: true,
         // As regras estão publicadas (npm run rules:check); permissão negada costuma ser envio repetido do mesmo scan
         // ou conteúdo acima do limite — mostra o detalhe real para diagnóstico
-        msg: /permission|insufficient/i.test(m)
+        msg: /permission-denied/i.test(m)
           ? `Firestore recusou o envio (${m}). Se já foi enviado, não precisa reenviar; senão use “Ver e exportar gravação”.`
           : m,
       }));

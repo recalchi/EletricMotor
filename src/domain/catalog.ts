@@ -342,8 +342,8 @@ export const CATALOG: VehicleComponent[] = [
       cap(
         'Bluetooth LE',
         '"EVS" conectável, serviços 0xFFF0 e 0xFFB0, anúncio fixo',
-        'Anuncia igual com a moto desligada ou ligada: bateria/km não vão no anúncio. Dados, se houver, ficam atrás ' +
-          'de conexão GATT — só com decisão do dono (nível 5 do roteiro).',
+        'Anuncia igual com a moto desligada ou ligada: bateria/km não vão no anúncio. O Scanner do celular conectou ' +
+          '(só leitura, 01/11) e recebeu lista de serviços vazia — o 0.8.8 tenta de novo após 1,5 s.',
       ),
     ],
     signals: [
@@ -386,6 +386,13 @@ export const CATALOG: VehicleComponent[] = [
         'Nome "z" + número de 15 dígitos (formato de IMEI), serviço 0xFFF0, dados fixos',
         'Dois desses foram vistos — confirmar se o segundo é de outra moto. O número não vai para o repositório.',
       ),
+      {
+        label: 'Serviço GATT (leitura pelo Scanner do celular)',
+        value: '0xFFF0: FFF1 (escrita + notificação), FFF2 (leitura = 00 0A), FFF3',
+        evidence: 'inspecao',
+        source: 'Scanner do app 0.8.7 (01/11/2026), só leitura',
+        note: 'UART BLE genérico: não envia nada sozinho em 20 s — responde a comandos, e escrever está bloqueado.',
+      },
     ],
     mesh3d: false,
   }),

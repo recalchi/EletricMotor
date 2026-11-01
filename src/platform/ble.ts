@@ -155,7 +155,14 @@ async function nativeLink(deviceId: string, name: string): Promise<BleLink> {
     id: device.deviceId,
     name,
     async services() {
-      const svcs: BleService[] = await BleClient.getServices(device.deviceId);
+      let svcs: BleService[] = await BleClient.getServices(device.deviceId);
+      // Alguns módulos (o "EVS" da moto, 01/11/2026) devolvem a lista vazia logo após conectar: espera e força nova
+      // descoberta (o Android pode ter guardado um cache vazio)
+      for (let i = 0; i < 2 && !svcs.length; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        await BleClient.discoverServices(device.deviceId).catch(() => undefined);
+        svcs = await BleClient.getServices(device.deviceId);
+      }
       return svcs.map((s) => ({
         uuid: s.uuid,
         characteristics: s.characteristics.map((c) => ({
