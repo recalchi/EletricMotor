@@ -23,6 +23,11 @@ export function advertClues(a: BleAdvert): Clue[] {
     c.push({ text: 'Nome típico de BMS (não confirmado na EVS)', weight: 30 });
   if (has(a, uuid16(0xff00))) c.push({ text: 'Serviço FF00 — comum em BMS genéricos (não confirmado)', weight: 20 });
   if (has(a, uuid16(0xffe0))) c.push({ text: 'Serviço FFE0 — módulo UART BLE genérico (tipo HM-10)', weight: 15 });
+  // Assinaturas vistas na captura da moto (01/11/2026): "EVS" anuncia 0xFFF0 + 0xFFB0; módulo 4G se chama "z"+IMEI
+  if (has(a, uuid16(0xfff0)) && has(a, uuid16(0xffb0)))
+    c.push({ text: 'Serviços FFF0 + FFB0 — mesma assinatura do "EVS" da moto', weight: 40 });
+  else if (has(a, uuid16(0xfff0))) c.push({ text: 'Serviço FFF0 — UART BLE genérico (visto na moto)', weight: 15 });
+  if (/^z\d{15}$/i.test(name)) c.push({ text: 'Nome no formato de IMEI — provável módulo 4G/rastreador', weight: 20 });
   if (has(a, NUS)) c.push({ text: 'Nordic UART — canal serial sobre BLE', weight: 20 });
   if (has(a, uuid16(0x180f))) c.push({ text: 'Battery Service padrão (0x180F)', weight: 10 });
   if (Object.keys(a.manufacturer).length)

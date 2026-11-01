@@ -17,6 +17,13 @@ const adv = (p: Partial<BleAdvert>): BleAdvert => ({
 });
 
 describe('scanner — classificação', () => {
+  it('reconhece as assinaturas da captura da moto mesmo sem nome (EVS = FFF0+FFB0; 4G = z+IMEI)', () => {
+    const u = (n: number) => `0000${n.toString(16)}-0000-1000-8000-00805f9b34fb`;
+    expect(advertScore(adv({ uuids: [u(0xfff0), u(0xffb0)] }))).toBeGreaterThanOrEqual(30);
+    expect(advertScore(adv({ name: 'z862708040000000', uuids: [u(0xfff0)] }))).toBeGreaterThanOrEqual(30);
+    expect(advertScore(adv({ name: 'TV Sala' }))).toBeLessThan(30);
+  });
+
   it('prioriza nome VOLTZ e BMS, ignora dispositivos sem pistas', () => {
     const list = [
       adv({ id: '1', name: 'Galaxy Buds' }),

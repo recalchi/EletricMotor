@@ -362,7 +362,8 @@ export const CATALOG: VehicleComponent[] = [
       cap(
         'Tomada do guidão',
         'Troca dados: módulo de áudio JieLi BR21 (placa de som USB + leitor sem mídia + teclas de mídia)',
-        'Áudio enviado por ela não saiu audível. Não traz dados de bateria/velocidade.',
+        'Áudio enviado por ela não saiu audível. Não traz dados de bateria/velocidade. Com o celular (cabo comum): ' +
+          'só carga lenta — celular e módulo são ambos "aparelho", então não há troca de dados sem adaptador OTG.',
       ),
       cap(
         'Tomada do compartimento (etiqueta "E6110 BX2 BigCat")',

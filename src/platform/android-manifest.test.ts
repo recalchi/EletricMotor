@@ -13,3 +13,10 @@ describe('manifesto Android', () => {
     );
   });
 });
+
+describe('versão do app', () => {
+  it('APP_VERSION (relatórios e envio de scans) acompanha o versionName do APK', () => {
+    const gradle = /versionName "([^"]+)"/.exec(read('android/app/build.gradle'))![1];
+    expect(read('src/app/diagnostics.ts')).toContain(`APP_VERSION = '${gradle}'`);
+  });
+});

@@ -18,6 +18,8 @@ import { useScan } from './autoScan';
  * Só é enviado quando o usuário toca em “Enviar” ou ativa o envio automático.
  */
 export const CHUNK_BYTES = 600_000;
+/** A regra do Firestore aceita `payload` < 900.000 caracteres; acima disso anúncios/exploração vão para os pedaços. */
+export const PAYLOAD_MAX = 850_000;
 const AUTO_KEY = 'em:scan-auto-upload';
 
 export function getAutoUpload(): boolean {
@@ -74,7 +76,6 @@ export async function uploadScanReport(note?: string): Promise<UploadResult> {
     const since = (s.startedAt ?? 0) - 1000;
     records = (await readSession(session)).filter((r) => r.t >= since);
   }
-  const chunks = chunkLines(records.map((r) => JSON.stringify(r)));
 
   const scanId = `${new Date(s.startedAt ?? Date.now()).toISOString().replace(/[:.]/g, '-')}`;
   const payload = {
@@ -93,9 +94,28 @@ export async function uploadScanReport(note?: string): Promise<UploadResult> {
     },
     erros: useDiag.getState().errors.slice(0, 50),
   };
+  const lines = records.map((r) => JSON.stringify(r));
+  let payloadJson = JSON.stringify(payload);
+  if (payloadJson.length > PAYLOAD_MAX) {
+    lines.unshift(
+      JSON.stringify({ kind: 'scan-adverts', data: payload.scan.adverts }),
+      JSON.stringify({ kind: 'scan-explored', data: payload.scan.explored }),
+    );
+    payloadJson = JSON.stringify({
+      ...payload,
+      erros: payload.erros.map((e) => ({ ...e, stack: undefined })),
+      scan: { ...payload.scan, adverts: [], explored: [], movedToChunks: true },
+    });
+  }
+  const chunks = chunkLines(lines);
 
   const ref = doc(db, 'users', uid, 'scans', scanId);
   // Firestore aceita até 500 operações por lote; pedaços grandes vão em lotes menores
+  // Falha com o código real do Firestore e os tamanhos (antes só "sem permissão", sem pista da causa)
+  const fail = (e: unknown): never => {
+    const code = (e as { code?: string }).code ?? 'erro';
+    throw new Error(`${code} · payload ${Math.round(payloadJson.length / 1024)} KB · ${chunks.length} parte(s) · ${e instanceof Error ? e.message : String(e)}`);
+  };
   const first = writeBatch(db);
   first.set(ref, {
     createdAt: serverTimestamp(),
@@ -105,15 +125,15 @@ export async function uploadScanReport(note?: string): Promise<UploadResult> {
     adverts: s.adverts.length,
     records: records.length,
     chunkCount: chunks.length,
-    payload: JSON.stringify(payload),
+    payload: payloadJson,
   });
-  await first.commit();
+  await first.commit().catch(fail);
   for (let i = 0; i < chunks.length; i += 8) {
     const b = writeBatch(db);
     chunks.slice(i, i + 8).forEach((c, j) => {
       b.set(doc(collection(ref, 'chunks'), String(i + j).padStart(4, '0')), { jsonl: c, n: i + j });
     });
-    await b.commit();
+    await b.commit().catch(fail);
   }
   return { scanId, records: records.length, chunks: chunks.length };
 }
