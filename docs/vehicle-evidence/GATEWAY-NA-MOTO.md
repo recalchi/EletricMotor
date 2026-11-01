@@ -54,8 +54,11 @@ troque o cabo (cabo só de carga não serve) ou instale o driver CP210x (Silicon
 | 8 | volte o cabo para o notebook; **desliga a moto** logo depois de o comando começar | `... scripts/moto/gateway-log.ps1 -Fase desligando -Segundos 30` |
 
 O que observar (o resumo de cada fase já calcula):
-- **Perdidas = 0** e nenhum texto de boot ("rst:", "Brownout") nas fases 3–4 → ligar a moto não reinicia nem
-  atrapalha o gateway.
+- **Reinícios da placa: nenhum** nas fases 3–4 e **perdidas ≤ 2 %** das mensagens → ligar a moto não reinicia nem
+  atrapalha o gateway. (Na bancada, 01/11, sai ~1 mensagem corrompida a cada 50–100 pelo próprio cabo/driver — isso
+  é normal; muitas perdidas ou um reinício bem na hora de ligar a moto é o que importa.)
+- "Ecos do driver descartados" no resumo é normal: o driver da porta repete o resto da sessão anterior ao abrir; o
+  script ignora isso.
 - **t1** coerente com o ambiente (sobe devagar perto do motor/sol) e `Sensor de temperatura: ok`.
 - **Bluetooth com cliente: sim** na fase 4 → o celular recebe o gateway ao lado da moto ligada.
 

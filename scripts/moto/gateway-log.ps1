@@ -19,19 +19,37 @@ if (-not $Porta) {
 }
 $out = Join-Path $Pasta "gateway-$Fase.log"
 $sp = New-Object System.IO.Ports.SerialPort $Porta, 115200
-$sp.DtrEnable = $false; $sp.RtsEnable = $false; $sp.ReadTimeout = 500; $sp.NewLine = "`n"
+$sp.DtrEnable = $false; $sp.RtsEnable = $false; $sp.Handshake = 'None'
+# Latin-1 = 1 byte por caractere: o lixo do boot do ESP32 (outra velocidade) não trava o decodificador
+$sp.Encoding = [Text.Encoding]::GetEncoding(28591)
 try { $sp.Open() } catch { throw "Não abri $Porta ($($_.Exception.Message)). Feche o app EletricMotor/monitor que estiver usando a porta." }
+# Logo após abrir, o driver CP210x pode devolver o resto da sessão anterior milhares de vezes (visto em 01/11/2026)
+Start-Sleep -Milliseconds 300; $sp.DiscardInBuffer()
 
 Write-Host "Ouvindo o gateway ($Fase) por $Segundos s... (só recepção)" -ForegroundColor Cyan
 $msgs = 0; $lost = 0; $lastSeq = $null; $fw = $null; $ds = @{}; $dsid = $null; $ble = 0; $heap = $null
-$t1 = $null; $hash = [ordered]@{}; $bad = 0
+$t1 = $null; $hash = [ordered]@{}; $bad = 0; $boots = @(); $up0 = $null; $t0 = Get-Date; $prev = $null; $dup = 0
 $end = (Get-Date).AddSeconds($Segundos)
 $w = New-Object System.IO.StreamWriter($out, $true, (New-Object Text.UTF8Encoding $false))
+$buf = New-Object Text.StringBuilder
+# ReadLine do .NET repete pedaços do buffer quando chegam bytes inválidos: lê o que houver e corta nas quebras de linha
+$lines = {
+  $buf.Append($sp.ReadExisting()) | Out-Null
+  $s = $buf.ToString(); $i = $s.LastIndexOf("`n")
+  if ($i -lt 0) { return }
+  $buf.Clear().Append($s.Substring($i + 1)) | Out-Null
+  $s.Substring(0, $i).Split("`n") | ForEach-Object { $_.TrimEnd("`r") }
+}
 try {
   while ((Get-Date) -lt $end) {
-    try { $line = $sp.ReadLine().TrimEnd("`r") } catch [TimeoutException] { continue }
+    if (-not $sp.BytesToRead) { Start-Sleep -Milliseconds 50; continue }
+    foreach ($line in (& $lines)) {
     if (-not $line) { continue }
+    # Mensagens têm seq e nunca se repetem; pedaço igual ao anterior é eco do driver
+    if ($line -eq $prev -and -not $line.StartsWith('{')) { $dup++; continue }
+    $prev = $line
     $w.WriteLine("$(Get-Date -Format 'HH:mm:ss.fff') $line")
+    if ($line -match 'rst:0x[0-9a-f]+ \(([A-Z_]+)\)') { $boots += "$([int]((Get-Date) - $t0).TotalSeconds) s ($($Matches[1]))"; continue }
     if ($line.StartsWith('#')) {
       $k = $line -replace '\d+', 'N'
       if ($hash.Contains($k)) { $hash[$k].n++ } else { $hash[$k] = @{ n = 1; ex = $line }; Write-Host "  placa: $line" }
@@ -41,6 +59,7 @@ try {
     try { $m = $line | ConvertFrom-Json } catch { $bad++; continue }
     if ($m.dev -ne 'esp32-hub') { continue }
     $msgs++
+    if ($null -eq $up0) { $up0 = $m.st.up }
     if ($null -ne $lastSeq -and $m.seq -gt $lastSeq + 1) { $lost += $m.seq - $lastSeq - 1 }
     $lastSeq = $m.seq
     if ($m.st) {
@@ -55,13 +74,15 @@ try {
       if (-not $t1) { $t1 = @{ min = $v; max = $v; last = $v } } else { $t1.min = [Math]::Min($t1.min, $v); $t1.max = [Math]::Max($t1.max, $v); $t1.last = $v }
     }
     if ($msgs % 10 -eq 1) { Write-Host ("  #{0} t1={1} ds={2} ble={3}" -f $m.seq, $m.ch.t1, $m.st.ds, $m.st.ble) }
+    }
   }
 } finally { $w.Close(); $sp.Close() }
 
 $f = { param($x) if ($null -eq $x) { '—' } else { ([double]$x).ToString('0.00', [Globalization.CultureInfo]'pt-BR') } }
 $sum = @(
   "## Gateway — fase $Fase ($(Get-Date -Format 'HH:mm'), $Segundos s, $Porta)"
-  "- Mensagens: $msgs · perdidas: $lost · linhas inválidas: $bad"
+  "- Mensagens: $msgs · perdidas: $lost · linhas inválidas: $bad$(if ($dup) { " · ecos do driver descartados: $dup" })"
+  "- Reinícios da placa: $(if ($boots.Count) { $boots -join ', ' } else { 'nenhum' }) · placa ligada havia $(if ($null -ne $up0) { "$up0 s" } else { '—' }) na 1ª mensagem$(if ($boots.Count -and [int]$boots[0].Split(' ')[0] -le 2) { ' (o 1º reinício foi ao abrir a porta, não é da moto)' })"
   "- Firmware: $(if ($fw) { $fw } else { '—' }) · heap livre: $heap KB · Bluetooth com cliente: $(if ($ble) { 'sim' } else { 'não' })"
   "- Sensor de temperatura: $(if ($ds.Count) { ($ds.Keys | ForEach-Object { "$_ $($ds[$_])×" }) -join ', ' } else { '—' })$(if ($dsid) { " · id $dsid" })"
   "- t1 (°C): mín $(& $f $t1.min) · máx $(& $f $t1.max) · último $(& $f $t1.last)"
