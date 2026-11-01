@@ -44,6 +44,51 @@ export interface FirmwareRelease {
 export const FIRMWARE_CATALOG: FirmwareRelease[] = [
   {
     name: 'esp32-gateway',
+    version: '1.3.0',
+    sha256: '660badb1f09db4b74c13f2bb04dc45b44d33ab60d2d88802fc42408919d693ca',
+    date: '2026-11-01',
+    notes:
+      'DS18B20 identificado pelo número de série (st.dsid, ex. 28-…) e estado (st.ds: ok · ausente · parasita = ' +
+      'fio vermelho fora do 3V3 · reset = 85 °C de power-on, descartado). Pode plugar o sensor com a placa ligada: ' +
+      'procura de novo a cada 5 s. Resolução 12 bits (0,0625 °C).',
+    path: 'firmware/esp32-gateway/1.3.0',
+    artifacts: [
+      {
+        role: 'bootloader',
+        file: 'bootloader.bin',
+        address: 0x1000,
+        size: 24992,
+        sha256: '47bbbfca119fe87190f63a67af9d85adff6433bcf3812ec92a9b9c9416a53ad1',
+        md5: '68acc136fae0daa0e5605d8b014254a4',
+      },
+      {
+        role: 'particoes',
+        file: 'partitions.bin',
+        address: 0x8000,
+        size: 3072,
+        sha256: '148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1',
+        md5: 'a039c66cd3488176037b616b7595fe72',
+      },
+      {
+        role: 'otadata',
+        file: 'boot_app0.bin',
+        address: 0xe000,
+        size: 8192,
+        sha256: 'f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0',
+        md5: 'e6327541e2dc394ca2c3b3280ac0f39f',
+      },
+      {
+        role: 'app',
+        file: 'app.bin',
+        address: 0x10000,
+        size: 698224,
+        sha256: 'a360c273e2f5b7144a0a83e0113deda65e525e2fae88bdb99065e1b9c9444ba1',
+        md5: '14cb4b35df835a7b417444b14f1f1ad4',
+      },
+    ],
+  },
+  {
+    name: 'esp32-gateway',
     version: '1.2.0',
     sha256: '0d740dcacb6a1f37b55535f89b30054b2225016ff30f35bfe23d48d5ab158a21',
     date: '2026-10-31',

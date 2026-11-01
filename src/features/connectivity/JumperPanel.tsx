@@ -1,4 +1,4 @@
-import type { BenchState } from '../../integrations/bench';
+import { DS18B20_WIRING, TEMP_RISE_OK, tempSensor, type BenchState } from '../../integrations/bench';
 import { cx } from '../../shared/ui';
 
 /**
@@ -11,6 +11,8 @@ export function JumperPanel({ bench, live }: { bench: BenchState; live: boolean 
   const tq = bench.ch.tq13;
   const dinOk = !!d27 && d27.min === 0 && d27.max === 1;
   const touchOk = !!tq && tq.min <= tq.max * 0.6;
+  const temp = tempSensor(bench);
+  const t1 = bench.ch.t1;
 
   const tiles = [
     {
@@ -45,6 +47,24 @@ export function JumperPanel({ bench, live }: { bench: BenchState; live: boolean 
         ? 'Passou: o valor caiu com o toque.'
         : `Um jumper só: fêmea no pino 13, ponta macho solta. Encoste o dedo no metal: deve cair abaixo de ${tq ? Math.round(tq.max * 0.6) : '~1000'}.`,
     },
+    {
+      pin: '4',
+      title: `Temperatura no pino 4 (DS18B20)${temp.id ? ` · ${temp.id}` : ''}`,
+      value: temp.state === 'ok' && t1 ? `${t1.last.toFixed(1)} °C` : '—',
+      // 15–40 °C cobre ambiente → mão
+      bar: temp.state === 'ok' && t1 ? Math.max(0, Math.min(1, (t1.last - 15) / 25)) : 0,
+      ok: temp.reacts,
+      todo:
+        temp.state === 'parasita'
+          ? 'A placa achou o sensor, mas ele está sem energia: o fio VERMELHO tem que chegar ao pino 3V3 (nunca 5V).'
+          : temp.state === 'reset'
+            ? 'Sensor achado! Descartando a 1ª leitura (85 °C de power-on) — aguarde 2 s.'
+            : temp.state !== 'ok'
+              ? DS18B20_WIRING
+              : temp.reacts
+                ? `Passou: subiu ${temp.rise!.toFixed(1)} °C com o calor da mão.`
+                : `Lendo ✓. Segure a ponta metálica na mão fechada ~30 s: deve subir pelo menos ${TEMP_RISE_OK} °C (agora ${temp.rise!.toFixed(1)} °C).`,
+    },
   ];
 
   return (
@@ -64,7 +84,7 @@ export function JumperPanel({ bench, live }: { bench: BenchState; live: boolean 
           Ver desenho passo a passo
         </a>
       </p>
-      <div className="grid gap-2 md:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => (
           <div key={t.pin} className={cx('rounded border p-2', t.ok ? 'border-emerald-500/50' : 'border-ink-600')}>
             <div className="flex items-baseline justify-between">

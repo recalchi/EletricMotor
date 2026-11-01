@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { benchChecks, benchLog, benchMessage, emptyBench, gatewayDevice, nextStep, type BenchState } from './bench';
+import { benchChecks, benchLog, benchMessage, emptyBench, gatewayDevice, nextStep, tempSensor, type BenchState } from './bench';
 import { latestRelease, parseFirmwareAnnounce, updateAdvice } from './firmware';
 import { SerialAdapter } from './hardware/SerialAdapter';
 import { parseEmgpLine } from './protocol';
@@ -53,6 +53,23 @@ describe('bateria de testes do gateway', () => {
     expect(status(feed(s, line(1, '"t1":24.5,"v34":0.1,"d27":1,"tq13":1777', '"ds":"ok"')), 'temp')).toBe('ok');
   });
 
+  it('firmware 1.3.0: identifica o DS18B20, aponta fio vermelho solto e exige reação ao calor', () => {
+    const ch = (t: number) => `"t1":${t},"v34":0.1,"d27":1,"tq13":1777`;
+    let s = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', '"ds":"parasita","dsid":"28-0123456789AB"'));
+    expect(status(s, 'temp')).toBe('pendente');
+    expect(benchChecks(s, ctx).find((c) => c.id === 'temp')!.detail).toContain('vermelho');
+    s = feed(s, line(1, ch(24.5), '"ds":"ok","dsid":"28-0123456789AB"'));
+    expect(status(s, 'temp')).toBe('ok');
+    expect(tempSensor(s).id).toBe('28-0123456789AB');
+    expect(status(s, 'temp_reage')).toBe('pendente');
+    s = feed(s, line(2, ch(26.3), '"ds":"ok","dsid":"28-0123456789AB"'));
+    expect(status(s, 'temp_reage')).toBe('ok');
+    // sensor removido: número de série some e a leitura antiga não conta mais como ok
+    s = feed(s, line(3, '"v34":0.1,"d27":1,"tq13":1777', '"ds":"ausente"'));
+    expect(tempSensor(s).id).toBeUndefined();
+    expect(status(s, 'temp')).toBe('aguardando_hw');
+  });
+
   it('firmware: 1.0.0 pede atualização, a versão do catálogo passa', () => {
     const old = parseFirmwareAnnounce('# fw name=esp32-gateway version=1.0.0 emgp=1 dev=esp32-hub')!;
     let s = benchLog(emptyBench(), '# fw …', old, updateAdvice(old));
@@ -63,8 +80,8 @@ describe('bateria de testes do gateway', () => {
   });
 
   it('firmware 1.2.0+: versão no status identifica sem esperar o anúncio (também por Bluetooth)', () => {
-    const s = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', '"ds":"ausente","fw":"1.2.0"'), 'ble-nus');
-    expect(s.fw?.version).toBe('1.2.0');
+    const s = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', `"ds":"ausente","fw":"${latestRelease('esp32-gateway')!.version}"`), 'ble-nus');
+    expect(s.fw?.version).toBe(latestRelease('esp32-gateway')!.version);
     expect(status(s, 'firmware')).toBe('ok');
     const old = feed(emptyBench(), line(0, '"v34":0.1,"d27":1,"tq13":1777', '"fw":"1.1.0"'));
     expect(status(old, 'firmware')).toBe('pendente');

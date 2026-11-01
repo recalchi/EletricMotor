@@ -1,0 +1,117 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teste do sensor de temperatura</title><style>
+body{margin:0;background:#fff;color:#222;font-family:system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}h1{font-size:20px;margin:8px 0}h2{font-size:17px;margin:0 0 6px}
+section{border:1px solid #ddd;border-radius:10px;padding:12px;margin:14px 0}svg{width:100%;height:auto;display:block}
+.a{font-size:15px;margin:8px 0 2px}.b{font-size:14px;color:#555;margin:4px 0 0}
+.warn{background:#FCEBEB;color:#791F1F;border-radius:8px;padding:8px 10px;font-size:14px}
+.ok{background:#EAF3DE;color:#27500A;border-radius:8px;padding:8px 10px;font-size:15px}
+ol{padding-left:22px;margin:6px 0}li{margin:6px 0;font-size:15px}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+</style></head><body><main>
+<h1>Teste do sensor de temperatura DS18B20 — gateway Faísca</h1>
+
+<p class="ok"><b>O fio vermelho pode ficar perto dos outros, sim.</b> Os fios do sensor não precisam chegar até a placa:
+ponha os 3 fios do sensor em 3 colunas vizinhas da protoboard. Quem faz o caminho até o ESP32 são os
+<b>jumpers macho-fêmea</b> (são mais compridos). Coluna da protoboard = mesmo fio: o jumper que sai do 3V3 e entra na
+coluna do vermelho é a mesma coisa que o vermelho estar no 3V3.</p>
+
+<p class="warn">O vermelho vai no <b>3V3</b>, <b>nunca no 5V</b> — no 5V o resistor empurra 5 V para o pino G4 e pode
+queimar a entrada da placa. Pode montar com o USB plugado, mas sem encostar fios soltos uns nos outros.</p>
+
+<section><h2>Desenho da montagem</h2>
+<svg viewBox="0 0 680 470" role="img" aria-label="Montagem do DS18B20 com jumpers macho-fêmea">
+  <!-- placa -->
+  <rect x="70" y="20" width="520" height="150" rx="8" fill="#1F2933"/>
+  <rect x="200" y="52" width="110" height="86" rx="4" fill="#B4B2A9"/>
+  <text x="255" y="100" font-size="13" fill="#2C2C2A" text-anchor="middle">ESP-32</text>
+  <rect x="560" y="82" width="34" height="26" rx="4" fill="#888780"/>
+  <text x="548" y="100" font-size="12" fill="#D3D1C7" text-anchor="end">USB</text>
+  <g fill="#BA7517">
+    <rect x="89" y="26" width="6" height="6"/><rect x="114" y="26" width="6" height="6"/><rect x="139" y="26" width="6" height="6"/><rect x="164" y="26" width="6" height="6"/><rect x="189" y="26" width="6" height="6"/><rect x="214" y="26" width="6" height="6"/><rect x="239" y="26" width="6" height="6"/><rect x="264" y="26" width="6" height="6"/><rect x="289" y="26" width="6" height="6"/><rect x="314" y="26" width="6" height="6"/><rect x="339" y="26" width="6" height="6"/><rect x="364" y="26" width="6" height="6"/><rect x="389" y="26" width="6" height="6"/><rect x="414" y="26" width="6" height="6"/><rect x="439" y="26" width="6" height="6"/><rect x="464" y="26" width="6" height="6"/><rect x="489" y="26" width="6" height="6"/><rect x="514" y="26" width="6" height="6"/><rect x="539" y="26" width="6" height="6"/>
+    <rect x="89" y="158" width="6" height="6"/><rect x="114" y="158" width="6" height="6"/><rect x="139" y="158" width="6" height="6"/><rect x="164" y="158" width="6" height="6"/><rect x="189" y="158" width="6" height="6"/><rect x="214" y="158" width="6" height="6"/><rect x="239" y="158" width="6" height="6"/><rect x="264" y="158" width="6" height="6"/><rect x="289" y="158" width="6" height="6"/><rect x="314" y="158" width="6" height="6"/><rect x="339" y="158" width="6" height="6"/><rect x="364" y="158" width="6" height="6"/><rect x="389" y="158" width="6" height="6"/><rect x="414" y="158" width="6" height="6"/><rect x="439" y="158" width="6" height="6"/><rect x="464" y="158" width="6" height="6"/><rect x="489" y="158" width="6" height="6"/><rect x="514" y="158" width="6" height="6"/><rect x="539" y="158" width="6" height="6"/>
+  </g>
+  <!-- rótulos dos pinos usados -->
+  <text x="92" y="46" font-size="11" fill="#D3D1C7" text-anchor="middle">GND</text>
+  <text x="392" y="46" font-size="12" fill="#FAC775" text-anchor="middle" font-weight="700">G4</text>
+  <text x="392" y="60" font-size="10" fill="#D3D1C7" text-anchor="middle">13º de cima</text>
+  <text x="84" y="150" font-size="12" fill="#F09595" text-anchor="start" font-weight="700">3V3</text>
+  <text x="84" y="136" font-size="10" fill="#D3D1C7" text-anchor="start">1º de baixo</text>
+  <text x="542" y="150" font-size="11" fill="#E24B4A" text-anchor="middle">5V ✗</text>
+
+  <!-- protoboard -->
+  <rect x="80" y="240" width="520" height="120" rx="6" fill="#F1EFE8" stroke="#D3D1C7"/>
+  <g fill="#B4B2A9">
+    <!-- colunas de 5 furos -->
+    <defs><g id="col"><rect x="-3" y="252" width="6" height="6"/><rect x="-3" y="272" width="6" height="6"/><rect x="-3" y="292" width="6" height="6"/><rect x="-3" y="312" width="6" height="6"/><rect x="-3" y="332" width="6" height="6"/></g></defs>
+    <use href="#col" x="120"/><use href="#col" x="140"/><use href="#col" x="160"/><use href="#col" x="180"/><use href="#col" x="200"/><use href="#col" x="220"/><use href="#col" x="240"/><use href="#col" x="260"/><use href="#col" x="280"/><use href="#col" x="300"/><use href="#col" x="320"/><use href="#col" x="340"/><use href="#col" x="360"/><use href="#col" x="380"/><use href="#col" x="400"/><use href="#col" x="420"/><use href="#col" x="440"/><use href="#col" x="460"/><use href="#col" x="480"/><use href="#col" x="500"/><use href="#col" x="520"/><use href="#col" x="540"/><use href="#col" x="560"/>
+  </g>
+  <!-- destaque das 3 colunas usadas -->
+  <rect x="190" y="246" width="20" height="98" rx="4" fill="none" stroke="#E24B4A" stroke-width="2"/>
+  <rect x="230" y="246" width="20" height="98" rx="4" fill="none" stroke="#BA7517" stroke-width="2"/>
+  <rect x="270" y="246" width="20" height="98" rx="4" fill="none" stroke="#444441" stroke-width="2"/>
+
+  <!-- jumpers macho-fêmea (fêmea no pino, macho na protoboard) -->
+  <path d="M92 164 V200 H200 V255" fill="none" stroke="#E24B4A" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M92 26 V10 H40 V215 H280 V255" fill="none" stroke="#444441" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M392 26 V8 H630 V225 H240 V255" fill="none" stroke="#EF9F27" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="86" y="160" width="12" height="14" rx="2" fill="#2C2C2A"/>
+  <rect x="86" y="18" width="12" height="14" rx="2" fill="#2C2C2A"/>
+  <rect x="386" y="18" width="12" height="14" rx="2" fill="#2C2C2A"/>
+
+  <!-- resistor 4,7 kΩ entre a coluna do vermelho e a do amarelo -->
+  <line x1="200" y1="295" x2="240" y2="295" stroke="#888780" stroke-width="2"/>
+  <rect x="208" y="289" width="24" height="12" rx="5" fill="#D9C08C" stroke="#8a7547"/>
+  <rect x="213" y="289" width="3" height="12" fill="#BA7517"/><rect x="219" y="289" width="3" height="12" fill="#5F5E5A"/><rect x="225" y="289" width="3" height="12" fill="#E24B4A"/>
+  <rect x="304" y="262" width="230" height="20" rx="4" fill="#fff" stroke="#D3D1C7"/><text x="312" y="276" font-size="12" fill="#444441">resistor 4,7 kΩ: vermelho ↔ amarelo</text><path d="M304 276 L236 292" stroke="#888780" stroke-width="1" fill="none"/>
+
+  <!-- sensor com fios curtos -->
+  <path d="M200 335 V395 Q200 405 215 410" fill="none" stroke="#E24B4A" stroke-width="3"/>
+  <path d="M240 335 V405" fill="none" stroke="#EF9F27" stroke-width="3"/>
+  <path d="M280 335 V395 Q280 405 265 410" fill="none" stroke="#2C2C2A" stroke-width="3"/>
+  <rect x="205" y="405" width="70" height="20" rx="8" fill="#5F5E5A"/>
+  <rect x="222" y="425" width="36" height="34" rx="6" fill="#B4B2A9" stroke="#888780"/>
+  <text x="300" y="430" font-size="12" fill="#444441">sensor DS18B20 (fios curtos ficam</text>
+  <text x="300" y="446" font-size="12" fill="#444441">só na protoboard)</text>
+
+  <text x="200" y="384" font-size="11" fill="#A32D2D" text-anchor="middle">VCC</text>
+  <text x="240" y="384" font-size="11" fill="#854F0B" text-anchor="middle">DATA</text>
+  <text x="280" y="384" font-size="11" fill="#444441" text-anchor="middle">GND</text>
+</svg>
+<p class="b">Em cima, a placa (fileira de cima e de baixo de pinos). Em baixo, a protoboard: cada coluna de 5 furinhos é um
+fio só. Os quadradinhos pretos são as pontas <b>fêmea</b> encaixadas nos pinos da placa.</p>
+</section>
+
+<section><h2>Passo a passo</h2>
+<ol>
+  <li><b>Sensor na protoboard:</b> cada fio do sensor num furo de uma coluna diferente, lado a lado
+    (<span class="dot" style="background:#E24B4A"></span>vermelho, <span class="dot" style="background:#EF9F27"></span>amarelo,
+    <span class="dot" style="background:#2C2C2A"></span>preto). Torça bem a ponta de cada fio antes de enfiar.</li>
+  <li><b>Resistor de 4,7 kΩ</b> (faixas amarelo-violeta-vermelho): uma perna na coluna do vermelho e a outra na coluna do amarelo.</li>
+  <li><b>Jumper 1 (vermelho):</b> fêmea no pino <b>3V3</b> — o 1º da fileira de baixo — e macho na coluna do vermelho.</li>
+  <li><b>Jumper 2 (preto):</b> fêmea num pino <b>GND</b> — o 1º da fileira de cima, logo acima do 3V3, serve — e macho na coluna do preto.</li>
+  <li><b>Jumper 3 (amarelo):</b> fêmea no pino <b>G4</b> — fileira de cima, conte 13 pinos a partir do GND da ponta do 3V3 — e macho na coluna do amarelo.</li>
+  <li><b>Reinicie a placa:</b> tire e ponha o cabo USB (ou aperte o botão EN). O firmware atual (1.2.0) só procura o
+    sensor quando liga; a 1.3.0, que vou gravar, acha sozinho em até 5 s.</li>
+  <li><b>No app</b> (atalho “EletricMotor (bancada USB)”): o bloco <b>Temperatura</b> deve mostrar a temperatura do
+    ambiente (uns 20–30 °C).</li>
+  <li><b>Teste de reação:</b> segure a ponta metálica do sensor na mão fechada por ~30 s. Deve subir pelo menos
+    1,5 °C; ao soltar, volta a cair. Aí o teste passou ✓.</li>
+</ol>
+<p class="b">Sensor com plaquinha adaptadora (3 pinos VCC / DAT / GND): ela já tem o resistor — pule o passo 2 e ligue
+VCC→3V3, GND→GND, DAT→G4. Sensor sem fios (3 perninhas): com a face reta para você, esquerda = GND, meio = DATA,
+direita = VCC. Em algumas versões o fio de dados é branco ou azul em vez de amarelo.</p>
+</section>
+
+<section><h2>Se não funcionar</h2>
+<table>
+  <tr><th>O app mostra</th><th>Causa provável</th><th>O que fazer</th></tr>
+  <tr><td>“sensor ausente” / sem leitura</td><td>amarelo fora do G4, fio solto na protoboard ou sem o resistor</td><td>conferir o G4 (13º de cima), apertar os fios, conferir o resistor entre vermelho e amarelo; reiniciar a placa</td></tr>
+  <tr><td>85,0 °C parado</td><td>sensor sem energia ou primeira leitura</td><td>conferir o vermelho no 3V3; aguardar a leitura seguinte</td></tr>
+  <tr><td>“sem alimentação / fio vermelho” (firmware 1.3.0)</td><td>vermelho não chega ao 3V3</td><td>refazer o jumper 1</td></tr>
+  <tr><td>−127 °C ou valores pulando</td><td>mau contato no amarelo ou preto</td><td>torcer as pontas, trocar de furo na mesma coluna</td></tr>
+  <tr><td>sensor esquentando sozinho</td><td>vermelho e preto trocados</td><td>tirar o USB na hora e destrocar</td></tr>
+</table>
+</section>
+</main></body></html>

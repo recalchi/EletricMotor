@@ -91,9 +91,42 @@ export function benchMessage(s: BenchState, msg: EmgpMessage, transport: string,
     lastAt: at,
     transports: s.transports.includes(transport) ? s.transports : [...s.transports, transport],
     ch,
-    st: { ...s.st, ...(msg.st ?? {}) },
+    st: mergeSt(s.st, msg.st),
   };
 }
+
+/** O número de série do DS18B20 (st.dsid) só vale enquanto a placa o envia: sensor removido = some do status. */
+function mergeSt(prev: BenchState['st'], st: EmgpMessage['st']): BenchState['st'] {
+  const next = { ...prev, ...(st ?? {}) };
+  if (st && 'ds' in st && !('dsid' in st)) delete next.dsid;
+  return next;
+}
+
+/** Aquecer a ponta do sensor na mão por ~30 s sobe 2–5 °C; 1,5 °C já prova que a leitura é real. */
+export const TEMP_RISE_OK = 1.5;
+
+export type TempSensorState = 'ok' | 'ausente' | 'parasita' | 'reset' | 'desconhecido';
+
+/** Estado do DS18B20 pelo que a placa informa (st.ds; firmware 1.3.0+ manda também o número de série st.dsid). */
+export function tempSensor(s: BenchState): { state: TempSensorState; id?: string; rise?: number; reacts: boolean } {
+  const ds = s.st.ds;
+  const t1 = s.ch.t1;
+  const state: TempSensorState =
+    ds === 'ok' || ds === 'ausente' || ds === 'parasita' || ds === 'reset' ? ds : t1 ? 'ok' : 'desconhecido';
+  const rise = t1 ? t1.max - t1.min : undefined;
+  return {
+    state,
+    id: typeof s.st.dsid === 'string' ? s.st.dsid : undefined,
+    rise,
+    reacts: state === 'ok' && rise != null && rise >= TEMP_RISE_OK,
+  };
+}
+
+/** Ligação do DS18B20 na bancada (fios curtos do sensor ficam na protoboard; jumpers levam aos pinos da placa). */
+export const DS18B20_WIRING =
+  'Fios do sensor em 3 colunas da protoboard. Vermelho → 3V3 (1º pino da fileira de baixo; pode usar um jumper até ' +
+  'lá — nunca o 5V), preto → qualquer GND, amarelo → G4 (13º pino da fileira de cima), resistor de 4,7 kΩ entre as ' +
+  'colunas do vermelho e do amarelo.';
 
 /** Linhas "#" do firmware: anúncio de versão e resultado do envio pela internet. */
 export function benchLog(s: BenchState, line: string, fw?: FirmwareAnnounce, advice?: UpdateAdvice): BenchState {
@@ -133,7 +166,8 @@ export function benchChecks(s: BenchState, ctx: BenchContext): BenchCheck[] {
   const d = s.ch.d27;
   const tq = s.ch.tq13;
   const noBench = 'Exige firmware 1.1.0 ou mais novo — atualize na tela Firmware.';
-  const ds = s.st.ds;
+  const temp = tempSensor(s);
+  const t1 = s.ch.t1;
   return [
     {
       id: 'usb',
@@ -204,10 +238,32 @@ export function benchChecks(s: BenchState, ctx: BenchContext): BenchCheck[] {
       id: 'temp',
       group: 'sensores',
       label: 'Temperatura DS18B20 (t1)',
-      status: s.ch.t1 ? 'ok' : ds === 'ausente' ? 'aguardando_hw' : 'pendente',
-      detail: s.ch.t1 ? `agora ${fmt(s.ch.t1.last, 1)} °C` : ds === 'ausente' ? 'Placa informa: sensor ausente.' : 'Sem leitura.',
+      status: temp.state === 'ok' && t1 ? 'ok' : temp.state === 'ausente' ? 'aguardando_hw' : 'pendente',
+      detail:
+        temp.state === 'ok' && t1
+          ? `agora ${fmt(t1.last, 1)} °C${temp.id ? ` · sensor ${temp.id}` : ''}`
+          : temp.state === 'parasita'
+            ? `Sensor achado${temp.id ? ` (${temp.id})` : ''}, mas sem alimentação: o fio vermelho não está no 3V3.`
+            : temp.state === 'reset'
+              ? 'Sensor achado; primeira leitura (85 °C de power-on) descartada — aguarde a próxima.'
+              : temp.state === 'ausente'
+                ? 'Placa informa: sensor ausente.'
+                : 'Sem leitura.',
       howTo:
-        'Quando chegarem: DS18B20 VCC→3V3, GND→GND, DATA→GPIO4 e resistor de 4,7 kΩ entre DATA e 3V3. Teste na protoboard antes da moto.',
+        temp.state === 'parasita'
+          ? 'Confira o vermelho: deve chegar ao pino 3V3 (não 5V). O resistor de 4,7 kΩ vai entre o vermelho e o amarelo.'
+          : `${DS18B20_WIRING} Com firmware 1.3.0+ pode ligar com a placa no USB: ela acha o sensor em até 5 s.`,
+    },
+    {
+      id: 'temp_reage',
+      group: 'sensores',
+      label: 'Temperatura reage ao calor (aquecer na mão)',
+      status: temp.reacts ? 'ok' : temp.state === 'ok' ? 'pendente' : 'aguardando_hw',
+      detail:
+        temp.rise != null && temp.state === 'ok'
+          ? `variação vista ${fmt(temp.rise, 1)} °C (precisa ${fmt(TEMP_RISE_OK, 1)} °C)`
+          : 'Primeiro o sensor precisa estar lendo.',
+      howTo: 'Segure a ponta metálica do sensor na mão fechada por ~30 s: a leitura deve subir. Solte e ela volta a cair.',
     },
     {
       id: 'cadastro',

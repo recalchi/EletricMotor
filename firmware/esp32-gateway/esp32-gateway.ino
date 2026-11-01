@@ -28,10 +28,11 @@
 #include "secrets.h"  // copie de secrets.example.h
 
 #define FW_NAME "esp32-gateway"
-#define FW_VERSION "1.2.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
+#define FW_VERSION "1.3.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
 #define FW_ANNOUNCE_MS 10000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
+#define DS_RESCAN_MS 5000       // sem sensor: procura de novo no barramento (pode plugar sem reiniciar a placa)
 #define HTTP_BATCH 10           // mensagens por POST (função aceita até 50; limite 1 req/s)
 
 // Testes de bancada (só jumpers, sem componentes) — canais de diagnóstico, nunca mapeados para a moto:
@@ -53,6 +54,12 @@ bool bleClient = false;
 uint16_t blePayload = 20;  // MTU negociado − 3; começa no mínimo do BLE (MTU 23)
 uint32_t seq = 0;
 String httpBuffer;
+// DS18B20: endereço ROM (número de série de 64 bits; byte 0 = família, 0x28 = DS18B20)
+DeviceAddress dsAddr;
+bool dsFound = false;
+bool dsFresh = false;       // primeira conversão após achar o sensor (85,00 °C aqui é o valor de power-on, não leitura)
+String dsId;                // "28-AABBCCDDEEFF" (formato do Linux/1-Wire)
+const char* dsState = "ausente";  // ok · ausente · parasita (sem VCC: fio vermelho fora do 3V3) · reset (85 °C)
 int httpCount = 0;
 
 class ServerCallbacks : public NimBLEServerCallbacks {
@@ -126,6 +133,23 @@ void publish(const String& line) {
   }
 }
 
+void scanDs() {
+  sensors.begin();
+  bool found = sensors.getAddress(dsAddr, 0);
+  if (found && !dsFound) {
+    char id[20];
+    snprintf(id, sizeof id, "%02X-%02X%02X%02X%02X%02X%02X", dsAddr[0], dsAddr[6], dsAddr[5], dsAddr[4], dsAddr[3],
+             dsAddr[2], dsAddr[1]);
+    dsId = id;
+    sensors.setResolution(dsAddr, 12);
+    dsFresh = true;
+    bool crcOk = OneWire::crc8(dsAddr, 7) == dsAddr[7];
+    Serial.printf("# ds18b20 encontrado id=%s familia=0x%02X crc=%s parasita=%d n=%d\n", id, dsAddr[0],
+                  crcOk ? "ok" : "erro", sensors.isParasitePowerMode() ? 1 : 0, sensors.getDeviceCount());
+  }
+  dsFound = found;
+}
+
 void announceFirmware() {
   // Linha "#": o app trata como log do firmware, não como telemetria.
   Serial.printf("# fw name=%s version=%s emgp=1 dev=%s chip_rev=%d sdk=%s\n",
@@ -135,7 +159,7 @@ void announceFirmware() {
 void setup() {
   Serial.begin(115200);
   announceFirmware();
-  sensors.begin();
+  scanDs();
   pinMode(BENCH_DIN_PIN, INPUT_PULLUP);
   analogSetPinAttenuation(BENCH_ADC_PIN, ADC_11db);  // faixa até ~3,1 V
   setupBle();
@@ -156,10 +180,24 @@ void loop() {
   if (millis() - last < SAMPLE_MS) return;
   last = millis();
 
-  sensors.requestTemperatures();
-  float t = sensors.getTempCByIndex(0);
+  static uint32_t lastScan = 0;
+  if (!dsFound && millis() - lastScan >= DS_RESCAN_MS) {
+    lastScan = millis();
+    scanDs();
+  }
+  float t = DEVICE_DISCONNECTED_C;
+  if (dsFound) {
+    sensors.requestTemperaturesByAddress(dsAddr);  // 12 bits: ~750 ms
+    t = sensors.getTempC(dsAddr);
+  }
   bool hasTemp = t != DEVICE_DISCONNECTED_C;
-  if (!hasTemp) Serial.println("# sensor DS18B20 desconectado");
+  if (dsFound && !hasTemp) {
+    dsFound = false;  // sumiu do barramento: avisa uma vez e volta a procurar
+    Serial.println("# sensor DS18B20 desconectado");
+  }
+  if (hasTemp && dsFresh && t == 85.0f) hasTemp = false;  // valor de power-on: descarta a primeira
+  dsState = !dsFound ? "ausente" : sensors.isParasitePowerMode() ? "parasita" : !hasTemp ? "reset" : "ok";
+  if (dsFound) dsFresh = false;
 
   // ts só é enviado com relógio sincronizado (NTP); sem ele o app usa o horário de recebimento
   time_t now = time(nullptr);
@@ -172,6 +210,7 @@ void loop() {
   String line = String("{\"v\":1,\"dev\":\"") + DEVICE_ID + "\",\"seq\":" + String(seq++) + ts + ",\"ch\":{" + ch +
                 "},\"st\":{\"rssi\":" + String(WiFi.RSSI()) + ",\"up\":" + String(millis() / 1000) +
                 ",\"heap\":" + String(ESP.getFreeHeap() / 1024) + ",\"ble\":" + String(bleClient ? 1 : 0) +
-                ",\"ds\":\"" + (hasTemp ? "ok" : "ausente") + "\",\"fw\":\"" + FW_VERSION + "\"}}";
+                ",\"ds\":\"" + dsState + "\"" + (dsFound ? String(",\"dsid\":\"") + dsId + "\"" : String("")) +
+                ",\"fw\":\"" + FW_VERSION + "\"}}";
   publish(line);
 }

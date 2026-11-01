@@ -5,6 +5,7 @@ import { ManualEmgpAdapter, type TestConsoleEntry } from './hardware/DeviceStrea
 import { mapMessage } from './mapping';
 import { useDiag } from '../app/diagnostics';
 import { LineBuffer, isPlausible, parseEmgpLine, seqGap, validateEmgp } from './protocol';
+import { latestRelease } from './firmware';
 
 const NOW = 1_791_820_000_000;
 
@@ -116,7 +117,7 @@ describe('adaptador de fluxo (via injeção manual)', () => {
   });
   it('reanúncio da mesma versão não repete o aviso no log', () => {
     const { a, logs } = setup();
-    for (let i = 0; i < 3; i++) a.inject(`# fw name=esp32-gateway version=1.2.0 emgp=1 dev=esp32-hub n=${i}`);
+    for (let i = 0; i < 3; i++) a.inject(`# fw name=esp32-gateway version=${latestRelease('esp32-gateway')!.version} emgp=1 dev=esp32-hub n=${i}`);
     expect(logs.filter((l) => /está atualizado|desatualizado|mais novo/i.test(l))).toHaveLength(1);
   });
   it('canais de bancada (v34, d27, tq13) não aparecem como "sem mapeamento"', () => {
