@@ -59,7 +59,9 @@ function Lines($list, [bool]$public) {
   foreach ($d in $list) {
     $addr = if ($public) { Mask $d.addr } else { $d.addr }
     $ph = ($fases | ForEach-Object { if ($d.per[$_]) { "$_ $($d.per[$_].n)× (máx $($d.per[$_].rssiMax) dBm)" } else { "$_ —" } }) -join ' · '
-    "### $addr $(if ($d.names) { '— ' + ($d.names -join ', ') })"
+    # nomes com 10+ dígitos seguidos costumam ser IMEI/serial (módulos 4G) — mascarados na versão pública
+    $nm = @($d.names | ForEach-Object { if ($public) { [regex]::Replace($_, '\d{10,}', { param($m) $m.Value.Substring(0, 6) + '…' }) } else { $_ } })
+    "### $addr $(if ($nm) { '— ' + ($nm -join ', ') })"
     "- Por que: $($d.why)"
     "- Fases: $ph"
     "- Tipo de anúncio: $($d.kinds -join ', ')"
@@ -98,10 +100,10 @@ $audioTxt = @(foreach ($f in Get-ChildItem $dir -Filter 'audio-*.json') { $a = G
     "- **$($f.BaseName.Substring(6))**: saída padrão $($a.saida) · reproduziu: $($a.reproduziu) · dispositivos de áudio Bluetooth: $(@($a.bt) -join '; ')" })
 
 # ── USB: diferenças entre fotografias
-$usb = @{}
-foreach ($f in Get-ChildItem $dir -Filter 'usb-*.json') { $usb[$f.BaseName.Substring(4)] = @(Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json) }
+$usb = [ordered]@{}
+foreach ($f in Get-ChildItem $dir -Filter 'usb-*.json' | Sort-Object LastWriteTime) { $usb[$f.BaseName.Substring(4)] = @((Get-Content $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json) | ForEach-Object { $_ }) }  # PS 5.1 devolve a lista como um item só
 $usbLines = @()
-$keys = @($usb.Keys | Sort-Object)
+$keys = @($usb.Keys)  # ordem em que as fotografias foram tiradas
 for ($i = 1; $i -lt $keys.Count; $i++) {
   $a = @($usb[$keys[$i - 1]].id); $b = $usb[$keys[$i]]
   $new = @($b | Where-Object { $_.id -notin $a })
