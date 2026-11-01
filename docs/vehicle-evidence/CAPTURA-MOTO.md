@@ -2,8 +2,9 @@
 
 > **Para o agente (Claude Code no notebook):** siga este arquivo do começo ao fim. Seu trabalho é **coletar evidências
 > por recepção** quando o dono ligar a moto, gerar o relatório e entregá-lo pela nuvem. Você **não** conecta nada à
-> moto, **não** envia comandos a aparelhos da moto e **não** tenta ler/decodificar protocolos proprietários. A análise
-> e as atualizações do app ficam com a sessão principal (no PC), que lê o que você entregar.
+> moto e **não** envia comandos a aparelhos da moto. Na moto você só **grava bruto** (com os bytes em hex, que é o que
+> os decodificadores precisam); a **decodificação é feita depois, fora da moto**, pela sessão principal (no PC), com
+> repositórios públicos — veja "Decodificação com repositórios públicos".
 
 ## Objetivo — três validações + painel e som
 Descobrir, sem tocar na moto, o que ela expõe e que poderia levar informações do painel (bateria %, velocidade, km,
@@ -31,6 +32,34 @@ autonomia) para o app — e se dá para usar a caixa de som pelo celular:
   uma matéria cita "painel TFT com conexões USB e Bluetooth" ([Duas Rodas](https://www.revistaduasrodas.com.br/noticias/voltz-lanca-moto-eletrica-no-pais-por-r-15-900)).
   Nenhuma fonte diz se trocam dados — por isso o teste com o celular em **cada uma**.
 - Ficha: bateria de lítio 72 V / 33,6 Ah / 2,45 kWh por módulo; motor 3 kW (7 kW pico).
+
+## Decodificação com repositórios públicos (análise offline)
+Hoje há muita prática pública e aberta para entender o que um aparelho Bluetooth/serial transmite. Usamos isso **sobre
+os arquivos já capturados**, sem precisar mexer na moto. O que a captura grava pensando nisso:
+- `ble-*.jsonl` guarda, de cada anúncio, o **Manufacturer Data** (company ID + bytes em hex) e o **Service Data**
+  (tipos 0x16/0x20/0x21) em hex — exatamente o formato que os decodificadores abertos recebem.
+- `bt-classico-*.jsonl` guarda nome e classe do aparelho (áudio, telefone…), que indica o perfil (A2DP/HFP).
+
+Camadas, da mais simples à mais trabalhosa (cada uma só avança se a anterior achou algo):
+
+| Nível | O que é | Ferramenta pública | Onde roda | Risco |
+|---|---|---|---|---|
+| 1 | **Quem é o fabricante** do chip/aparelho pelo company ID e UUIDs | [Bluetooth SIG Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/) (lista oficial, também em YAML) | PC, offline | nenhum |
+| 2 | **Bater o anúncio com decodificadores prontos** (mais de 100 aparelhos BLE conhecidos) | [Theengs Decoder](https://github.com/theengs/decoder) (GPL-3.0; tem o Theengs Explorer, que mostra bruto × decodificado) | PC, offline | nenhum |
+| 3 | **Ver o que o app oficial conversa com a moto** — log Bluetooth do **próprio celular** do dono | Android "Registro de espionagem HCI Bluetooth" (Opções do desenvolvedor) + [Wireshark](https://www.wireshark.org/) filtro `btatt`; guia: [Gadgetbridge — Inspect Bluetooth packets](https://gadgetbridge.org/internals/development/bluetooth/) | celular do dono → PC | nenhum para a moto (é o app oficial que conversa, como sempre); o log tem dados privados → só OneDrive |
+| 4 | **Comparar com protocolos já documentados pela comunidade**, se o nível 1–3 indicar a família do BMS/controladora | BMS: [syssi/esphome-jbd-bms](https://github.com/syssi/esphome-jbd-bms), [syssi/esphome-jk-bms](https://github.com/syssi/esphome-jk-bms). Controladora: [jackhumbert/fardriver-controllers](https://github.com/jackhumbert/fardriver-controllers) e o fórum [Endless-sphere](https://endless-sphere.com/sphere/threads/fardriver-controller-serial-protocol-reverse-engineering.121825/) (Votol parece usar o mesmo display) | PC, offline | nenhum |
+| 5 | **Leitura ativa só-leitura** (conectar e pedir dados com um comando de leitura público) | nRF Connect / nosso gateway ESP32 | moto | **exige decisão do dono** depois dos níveis 1–4; nunca nesta captura |
+
+Regras para essas camadas:
+- **Nada de escrita.** Comandos que alteram BMS/controladora/painel (configuração, calibração, firmware) continuam
+  **bloqueados**, mesmo que um repositório público os documente.
+- **App oficial (APK):** pode-se inspecionar o APK público (ex.: [JADX](https://github.com/skylot/jadx)) só para achar
+  UUIDs e o formato das mensagens, para interoperar com a **própria moto**. Não contornar login, não usar a nuvem da
+  fabricante fora do app, não copiar código do app para o repositório (que é público) — registrar só as conclusões.
+- Nenhum repositório público citado tem a Voltz como alvo (busca em 01/11/2026). Por isso a primeira pergunta é o
+  nível 1: **quem fabricou** o módulo Bluetooth/BMS/controladora. Muitas motos usam peças de mercado (JBD, JK, Daly,
+  Fardriver, Votol…), e aí o protocolo já costuma estar documentado.
+- Logs HCI, APK e capturas brutas **nunca** vão para o git; só as conclusões, sem endereços.
 
 ## Segurança (obrigatório)
 - **Nunca ligue o notebook na entrada USB da moto.** A porta da moto fornece 5 V e a do notebook também: um cabo
@@ -99,6 +128,13 @@ Copie `scripts/moto/notas-modelo.md` para `hw-logs/moto/<data>/notas.md` e preen
    de som) e, no APK, Conectividade → **Som da moto → Tocar som de teste**; depois teste o Spotify. Anote se saiu som,
    a qualidade e se o volume do celular controla.
 5. **App oficial:** se ainda tiver o app Minha Voltz/Hello Voltz, abra e anote se funciona (prints na pasta do OneDrive).
+   **Se funcionar e falar com a moto por Bluetooth**, faça a gravação do nível 3 (é a evidência mais valiosa):
+   1. Celular → Opções do desenvolvedor → **Registro de espionagem HCI Bluetooth** = ativado; desligue e ligue o Bluetooth.
+   2. Abra o app oficial, conecte na moto e passe pelas telas de bateria/SoH/ciclos/km **anotando a hora** de cada
+      tela e o valor mostrado (é isso que permite achar o número dentro dos bytes depois).
+   3. Desative o registro. Gere o arquivo: Opções do desenvolvedor → **Relatório de bug** (o zip contém
+      `btsnoop_hci.log`; o caminho muda por aparelho) ou `adb bugreport` no notebook.
+   4. Coloque o zip/log **só na pasta do OneDrive** (contém tudo o que o Bluetooth do celular fez) — nunca no git.
 6. **Painel:** liste tudo o que ele mostra (bateria %, velocidade, km, autonomia, modos, ícones — inclusive ícone de
    Bluetooth) e os valores no momento. Tire fotos do painel ligado, das etiquetas e da porta USB.
 
@@ -126,10 +162,12 @@ EletricMotor-capturas\<data> e PR captura/moto-<data>".
 ## O que a sessão principal faz com isso
 - Lê a pasta privada do OneDrive e o PR; baixa o Scanner do celular (`npm run scans:pull`).
 - Atualiza a matriz de evidências (`evidence-matrix.md`) e o catálogo de sensores conforme o que foi comprovado.
-- Decide o próximo caminho para espelhar o painel no app. Caminhos seguros conhecidos: Bluetooth anunciado
-  publicamente (se existir e houver documentação/autorização), leitura do painel por câmera (OCR), leituras manuais
-  rápidas, gateway próprio com sensores externos. Leitura direta de BMS/controladora continua **bloqueada** sem
-  documentação do fabricante.
+- Roda a decodificação offline (níveis 1–4 acima): fabricante pelo company ID, Theengs Decoder sobre os hex, Wireshark
+  sobre o log HCI (se houver), comparação com os protocolos públicos de BMS/controladora.
+- Decide o próximo caminho para espelhar o painel no app. Caminhos seguros conhecidos: anúncio Bluetooth decodificado
+  (só recepção), protocolo do app oficial entendido pelo log HCI, leitura do painel por câmera (OCR), leituras manuais
+  rápidas, gateway próprio com sensores externos. **Leitura ativa** (nível 5) só com protocolo identificado e
+  aprovação do dono; **escrita** em BMS/controladora continua bloqueada.
 
 ## Problemas comuns
 | Sintoma | O que fazer |
@@ -139,3 +177,5 @@ EletricMotor-capturas\<data> e PR captura/moto-<data>".
 | `relatorio.ps1` diz "Nada capturado" | rodar com `-Data AAAA-MM-DD` da pasta em `hw-logs\moto\` |
 | OneDrive não encontrado | copiar `hw-logs\moto\<data>` para um meio **privado** e avisar o dono |
 | Erro de política de execução | sempre usar `powershell -ExecutionPolicy Bypass -File ...` |
+| Não há "Opções do desenvolvedor" no celular | Configurações → Sobre o telefone → tocar 7× em "Número da versão" |
+| Relatório de bug sem `btsnoop_hci.log` | ligar o registro HCI, **reiniciar o Bluetooth**, repetir a sessão no app e gerar de novo |

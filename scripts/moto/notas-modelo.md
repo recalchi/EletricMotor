@@ -18,6 +18,13 @@
 
 ## App oficial (Minha Voltz / Hello Voltz)
 - Ainda funciona? ___ · o que mostra (SoH, ciclos, carga, km): ______ (prints na pasta do OneDrive)
+- Conecta na moto por Bluetooth? ___ · log HCI gravado? ___ (arquivo só no OneDrive)
+- Linha do tempo durante o log (hora → tela → valor mostrado):
+  - __:__:__ → ______ → ______
+  - __:__:__ → ______ → ______
+
+## Etiquetas (para descobrir o fabricante — nível 1)
+- Marca/modelo visível no painel, BMS, carregador ou controladora (só o que dá para ver sem abrir nada): ______
 
 ## Celular (APK EletricMotor 0.8.3)
 - Scanner automático com a moto LIGADA, a 1 m, "Enviar para a nuvem" ligado: feito? resultado em uma linha:
