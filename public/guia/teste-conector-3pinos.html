@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Conector de 3 pinos da moto</title><style>
 body{margin:0;background:#fff;color:#222;font-family:system-ui,Segoe UI,Roboto,sans-serif}
-main{max-width:760px;margin:0 auto;padding:16px}h1{font-size:20px;margin:8px 0}h2{font-size:17px;margin:0 0 6px}
+main{max-width:760px;margin:0 auto;padding:16px}h1{font-size:20px;margin:8px 0}h2{font-size:17px;margin:0 0 6px}h3{font-size:15px;margin:0 0 4px}
 section{border:1px solid #ddd;border-radius:10px;padding:12px;margin:14px 0}svg{width:100%;height:auto;display:block}
 .b{font-size:14px;color:#555;margin:4px 0 0}
 .warn{background:#FCEBEB;color:#791F1F;border-radius:8px;padding:8px 10px;font-size:14px}
@@ -10,198 +10,160 @@ section{border:1px solid #ddd;border-radius:10px;padding:12px;margin:14px 0}svg{
 ol{padding-left:22px;margin:6px 0}li{margin:6px 0;font-size:15px}
 table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}
 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;margin-right:4px;border:1px solid #888}
-input[type=text]{width:90px;font-size:15px;padding:4px}select{font-size:15px;padding:3px}
-#veredito{margin-top:10px}code{background:#f3f3f3;padding:1px 4px;border-radius:4px;font-size:13px}
+input[type=text]{width:90px;font-size:15px;padding:4px}
+code{background:#f3f3f3;padding:1px 4px;border-radius:4px;font-size:13px}
+.passo{display:flex;gap:10px;align-items:flex-start;border-top:1px solid #eee;padding:10px 0}
+.passo:first-of-type{border-top:0}.passo input[type=checkbox]{width:20px;height:20px;margin-top:2px;flex:none}
+.passo.feito{opacity:.55}.n{font-weight:700;color:#185FA5}
+.tl td:first-child{white-space:nowrap}
 </style></head><body><main>
-<h1>Conector de 3 pinos solto na lateral direita — o que é e como ler</h1>
+<h1>Conector de 3 pinos (lateral direita) — teste B, passo a passo</h1>
 
-<p class="info"><b>O que pode ser.</b> Conector solto de 3 vias <span class="dot" style="background:#EFC000"></span>amarelo,
-<span class="dot" style="background:#1D9E75"></span>verde e <span class="dot" style="background:#2C2C2A"></span>preto perto da
-controladora. Em motos com controladora de mercado (Votol, Fardriver, Sabvoton…), um conector assim costuma ser:
-<b>(1) a porta serial de programação/diagnóstico</b> (preto = GND, os outros dois = TX/RX, em geral 115200 baud) —
-é a que nos interessa, porque dela saem velocidade, tensão, corrente e temperatura; ou <b>(2) uma entrada de acessório</b>
-sem uso (cruzeiro, ré, alarme, acelerador extra). Não há pinagem pública da Voltz EVS: <b>o multímetro decide</b>.</p>
-
-<p class="warn"><b>Regras deste teste.</b> Moto <b>no cavalete</b>, sem acelerar. <b>Etapa A só com o multímetro</b> — o ESP32
-não encosta na moto até as medidas dizerem que é seguro. Qualquer leitura <b>acima de 6 V</b> ou negativa: <b>pare</b>, não
-é linha de sinal. Na etapa B, o notebook <b>só na bateria</b> (carregador fora da tomada) e o ESP32 fica <b>parado</b>
-(jumper EN→GND): ele não envia nada, só passa o sinal para o notebook. Não tocar em fios grossos, conectores de fase
-ou da bateria (72 V).</p>
-
-<section><h2>Etapa A — multímetro (5 min)</h2>
-<ol>
-  <li>Multímetro em <b>tensão contínua (V⎓), escala 20 V</b>. Ponta <b>preta (COM)</b> encostada no pino do fio
-    <b>preto</b> do conector; prenda com um jumper fêmea no pino se ajudar. Cuidado para a ponta não encostar em dois pinos.</li>
-  <li><b>Moto desligada:</b> ponta vermelha no pino <b>amarelo</b> → anote. Depois no <b>verde</b> → anote.</li>
-  <li><b>Moto ligada (painel aceso), sem acelerar:</b> repita amarelo e verde. Olhe por ~10 s: o número
-    <b>fica parado</b> ou <b>fica tremendo</b> (ex.: 4,62 → 4,71 → 4,58)? Tremendo = provavelmente dados passando.</li>
-  <li><b>Opcional — continuidade (moto desligada):</b> escala de bipe/Ω entre o pino <b>preto</b> e a carcaça metálica da
-    tomada USB do compartimento. Bipe = mesmo terra.</li>
-</ol>
-
-<table id="tab">
-  <tr><th>Medida (COM no preto)</th><th>Moto desligada</th><th>Moto ligada</th><th>Ligada: o número…</th></tr>
-  <tr><td><span class="dot" style="background:#EFC000"></span>amarelo</td><td><input type="text" id="ay0" placeholder="V"></td><td><input type="text" id="ay1" placeholder="V"></td>
-    <td><select id="fy"><option value="">—</option><option value="p">fica parado</option><option value="t">fica tremendo</option></select></td></tr>
-  <tr><td><span class="dot" style="background:#1D9E75"></span>verde</td><td><input type="text" id="ag0" placeholder="V"></td><td><input type="text" id="ag1" placeholder="V"></td>
-    <td><select id="fg"><option value="">—</option><option value="p">fica parado</option><option value="t">fica tremendo</option></select></td></tr>
+<section><h2>Onde estamos</h2>
+<table class="tl">
+  <tr><th>Quando</th><th>O que foi feito</th><th>Resultado</th></tr>
+  <tr><td>01/11 ~18:00</td><td><b>Etapa A</b>: multímetro, ponta preta no fio preto</td>
+    <td><span class="dot" style="background:#EFC000"></span>amarelo 0 V (desligada e ligada) ·
+      <span class="dot" style="background:#1D9E75"></span>verde 0 V desligada → <b>5,70 V ligada, parado</b></td></tr>
+  <tr><td>18:25</td><td>ESP32 parado (jumper EN→GND), escuta com a moto desligada</td><td>0 bytes: a placa ficou parada como deveria ✓</td></tr>
+  <tr><td>18:27–18:30</td><td><b>Teste B, tentativa 1</b>: escuta no verde em 8 velocidades</td><td>0 bytes</td></tr>
+  <tr><td>depois</td><td>Conferência do divisor (ponto TX)</td>
+    <td><b>5,57 V</b> (devia dar ~2,85 V) → <b>montagem errada</b>: a escuta da tentativa 1 não vale. Provável causa:
+      resistores de valores diferentes, ou o R2 sem chegar ao GND (trilha azul cortada no meio).</td></tr>
+  <tr><td><b>agora</b></td><td colspan="2"><b>Tentativa 2</b>: montagem nova, mais simples, <b>sem usar a trilha azul</b>, só 3 colunas da protoboard. Siga abaixo.</td></tr>
 </table>
-<div id="veredito" class="b">Preencha as medidas com a moto ligada para ver o que fazer.</div>
+<p class="b">O que o verde pode ser: <b>saída serial da controladora em repouso</b> (porta de programação, nível alto parado
+até alguém pedir dados), ou <b>alimentação de 5 V</b> de acessório. O amarelo em 0 V não é saída serial; deve ser a
+entrada da controladora e <b>fica livre</b>: nada é ligado nele.</p>
 </section>
 
-<section><h2>Etapa B — o ESP32 como “cabo USB‑serial” (só se a etapa A mandar)</h2>
-<svg viewBox="0 0 680 590" role="img" aria-label="Montagem na protoboard: ESP32 com EN no GND, divisor R1 e R2 e conector da moto">
-  <defs>
-    <pattern id="furo" x="38" y="0" width="24" height="18" patternUnits="userSpaceOnUse"><rect x="9" y="0" width="5" height="5" fill="#9C9A92"/></pattern>
-  </defs>
-  <!-- placa ESP32 (38 pinos) -->
-  <rect x="20" y="10" width="430" height="140" rx="8" fill="#1F2933"/>
-  <rect x="150" y="40" width="110" height="80" rx="4" fill="#B4B2A9"/>
-  <text x="205" y="85" font-size="13" fill="#2C2C2A" text-anchor="middle">ESP-32</text>
-  <rect x="428" y="67" width="30" height="26" rx="4" fill="#888780"/>
-  <text x="420" y="84" font-size="12" fill="#D3D1C7" text-anchor="end">USB → notebook</text>
-  <g fill="#BA7517">
-    <rect x="37" y="16" width="7" height="7"/><rect x="62" y="16" width="7" height="7"/><rect x="87" y="16" width="7" height="7"/>
-    <rect x="112" y="16" width="7" height="7"/><rect x="137" y="16" width="7" height="7"/>
-    <rect x="37" y="137" width="7" height="7"/><rect x="62" y="137" width="7" height="7"/><rect x="87" y="137" width="7" height="7"/>
+<p class="warn"><b>Regras.</b> Moto no cavalete, sem acelerar. Notebook <b>só na bateria</b> (carregador fora da tomada).
+O ESP32 fica <b>parado</b> (EN no GND): não envia nada à moto. Monte e desmonte <b>sempre com a moto desligada</b>.
+Não tocar em fios grossos nem nos conectores da bateria (72 V).</p>
+
+<section><h2>Desenho da montagem (tentativa 2)</h2>
+<svg viewBox="0 0 680 330" role="img" aria-label="Protoboard com três colunas: SINAL na 5, TX na 10, GND na 15; R1 entre 5 e 10, R2 entre 10 e 15">
+  <!-- protoboard (só a metade de cima, colunas 3 a 16) -->
+  <rect x="20" y="58" width="480" height="172" rx="6" fill="#F4F2EC" stroke="#B4B2A9"/>
+  <rect x="94" y="62" width="28" height="164" rx="4" fill="#E1F5EE"/>
+  <rect x="264" y="62" width="28" height="164" rx="4" fill="#FAEEDA"/>
+  <rect x="434" y="62" width="28" height="164" rx="4" fill="#E8E6DF"/>
+  <g id="furos" fill="#9C9A92"></g>
+  <g font-size="11" fill="#5F5E5A" text-anchor="end">
+    <text x="34" y="84">a</text><text x="34" y="114">b</text><text x="34" y="144">c</text><text x="34" y="174">d</text><text x="34" y="204">e</text>
   </g>
-  <g font-size="11" fill="#F1EFE8" text-anchor="middle">
-    <text x="40" y="36">GND</text><text x="65" y="36">23</text><text x="90" y="36">22</text>
-    <text x="115" y="36" font-weight="700" fill="#FAC775">TX</text><text x="140" y="36">RX</text>
-    <text x="40" y="131">3V3</text><text x="65" y="131" font-weight="700" fill="#FAC775">EN</text><text x="90" y="131">VP</text>
+  <text x="260" y="226" font-size="10" fill="#888780" text-anchor="middle">↓ canal do meio (metade de baixo não é usada)</text>
+
+  <!-- R1: c5 → c10 -->
+  <path d="M108 140 H170 M216 140 H278" stroke="#5F5E5A" stroke-width="2.5" fill="none"/>
+  <rect x="170" y="132" width="46" height="16" rx="7" fill="#D85A30"/>
+  <text x="193" y="126" font-size="13" font-weight="700" fill="#993C1D" text-anchor="middle">R1</text>
+  <!-- R2: d10 → d15 -->
+  <path d="M278 170 H340 M386 170 H448" stroke="#5F5E5A" stroke-width="2.5" fill="none"/>
+  <rect x="340" y="162" width="46" height="16" rx="7" fill="#D85A30"/>
+  <text x="363" y="194" font-size="13" font-weight="700" fill="#993C1D" text-anchor="middle">R2</text>
+  <g fill="#5F5E5A"><circle cx="108" cy="140" r="4"/><circle cx="278" cy="140" r="4"/><circle cx="278" cy="170" r="4"/><circle cx="448" cy="170" r="4"/></g>
+
+  <!-- fios: a5 verde da moto, a10 TX do ESP32 (por último), a15 GND, b15 EN, c15 preto da moto -->
+  <path d="M108 80 V30" stroke="#1D9E75" stroke-width="3.5"/><circle cx="108" cy="80" r="5" fill="#1D9E75"/>
+  <rect x="44" y="6" width="128" height="24" rx="5" fill="#1D9E75"/><text x="108" y="23" font-size="12" fill="#fff" text-anchor="middle">J5 → fio VERDE (moto)</text>
+  <path d="M278 80 V30" stroke="#EF9F27" stroke-width="3.5" stroke-dasharray="6 4"/><circle cx="278" cy="80" r="5" fill="#EF9F27"/>
+  <rect x="200" y="6" width="156" height="24" rx="5" fill="#EF9F27"/><text x="278" y="23" font-size="12" fill="#412402" text-anchor="middle">J4 → TX do ESP32 (por último)</text>
+  <path d="M448 80 C 480 80, 500 80, 520 72" stroke="#2C2C2A" stroke-width="3.5" fill="none"/><circle cx="448" cy="80" r="5" fill="#2C2C2A"/>
+  <rect x="520" y="60" width="150" height="24" rx="5" fill="#2C2C2A"/><text x="595" y="77" font-size="12" fill="#fff" text-anchor="middle">J1 → GND do ESP32</text>
+  <path d="M448 110 C 480 110, 500 110, 520 108" stroke="#534AB7" stroke-width="3.5" fill="none"/><circle cx="448" cy="110" r="5" fill="#534AB7"/>
+  <rect x="520" y="96" width="150" height="24" rx="5" fill="#534AB7"/><text x="595" y="113" font-size="12" fill="#fff" text-anchor="middle">J2 → EN do ESP32</text>
+  <path d="M448 140 C 480 140, 500 142, 520 144" stroke="#444441" stroke-width="3.5" fill="none"/><circle cx="448" cy="140" r="5" fill="#444441"/>
+  <rect x="520" y="132" width="150" height="24" rx="5" fill="#888780"/><text x="595" y="149" font-size="12" fill="#fff" text-anchor="middle">J3 → fio PRETO (moto)</text>
+  <rect x="520" y="168" width="150" height="24" rx="5" fill="#FAF0B4" stroke="#EFC000"/><text x="595" y="185" font-size="12" fill="#633806" text-anchor="middle">fio AMARELO: livre</text>
+
+  <!-- multímetro: e10 (vermelha) e e15 (preta) -->
+  <path d="M278 200 C 278 290, 300 300, 330 300" stroke="#E24B4A" stroke-width="2.5" fill="none"/><circle cx="278" cy="200" r="6" fill="none" stroke="#E24B4A" stroke-width="2.5"/>
+  <path d="M448 200 C 448 290, 430 300, 400 300" stroke="#2C2C2A" stroke-width="2.5" fill="none"/><circle cx="448" cy="200" r="6" fill="none" stroke="#2C2C2A" stroke-width="2.5"/>
+  <rect x="330" y="284" width="70" height="34" rx="6" fill="#FAC775" stroke="#BA7517"/><text x="365" y="306" font-size="13" text-anchor="middle" fill="#412402">2,85 V</text>
+  <text x="200" y="316" font-size="11" fill="#A32D2D" text-anchor="middle">vermelha no e10</text>
+  <text x="540" y="316" font-size="11" fill="#2C2C2A" text-anchor="middle">preta no e15</text>
+  <g font-size="12" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="5" paint-order="stroke">
+    <text x="108" y="250" fill="#0F6E56">coluna 5 = SINAL</text>
+    <text x="278" y="250" fill="#854F0B">coluna 10 = TX</text>
+    <text x="448" y="250" fill="#2C2C2A">coluna 15 = GND</text>
   </g>
-  <text x="270" y="28" font-size="11" fill="#D3D1C7">um lado: GND 1º, TX 4º</text>
-  <text x="110" y="142" font-size="11" fill="#D3D1C7">outro lado: EN 2º</text>
-
-  <!-- protoboard comum (830 furos): trilhas +/− nas bordas, colunas numeradas de 5 furos -->
-  <rect x="20" y="190" width="640" height="300" rx="6" fill="#F4F2EC" stroke="#B4B2A9"/>
-  <line x1="40" y1="203" x2="640" y2="203" stroke="#E24B4A" stroke-width="1.5"/>
-  <line x1="40" y1="242" x2="640" y2="242" stroke="#185FA5" stroke-width="1.5"/>
-  <text x="30" y="217" font-size="11" fill="#E24B4A" text-anchor="middle">+</text>
-  <text x="30" y="233" font-size="13" fill="#185FA5" text-anchor="middle">−</text>
-  <!-- trilha azul (−) = GND inteira -->
-  <rect x="38" y="210" width="600" height="27" fill="#E6F1FB"/>
-  <g transform="translate(0,211)"><rect x="38" y="0" width="600" height="23" fill="url(#furo)"/></g>
-  <!-- colunas destacadas: 10 = SINAL, 15 = TX -->
-  <rect x="257" y="254" width="20" height="90" rx="3" fill="#E1F5EE"/>
-  <rect x="377" y="254" width="20" height="90" rx="3" fill="#FAEEDA"/>
-  <g transform="translate(0,258)"><rect x="38" y="0" width="600" height="90" fill="url(#furo)"/></g>
-  <rect x="38" y="350" width="600" height="14" fill="#E8E6DF"/>
-  <g transform="translate(0,372)"><rect x="38" y="0" width="600" height="90" fill="url(#furo)"/></g>
-  <g font-size="10" fill="#5F5E5A" text-anchor="middle">
-    <text x="50" y="252">1</text><text x="146" y="252">5</text><text x="266" y="252" font-weight="700" fill="#0F6E56">10</text>
-    <text x="386" y="252" font-weight="700" fill="#854F0B">15</text><text x="506" y="252">20</text><text x="626" y="252">25</text>
-  </g>
-  <g font-size="10" fill="#5F5E5A" text-anchor="end">
-    <text x="34" y="264">a</text><text x="34" y="282">b</text><text x="34" y="300">c</text><text x="34" y="318">d</text><text x="34" y="336">e</text>
-    <text x="34" y="378">f</text><text x="34" y="450">j</text>
-  </g>
-  <text x="340" y="480" font-size="11" fill="#888780" text-anchor="middle">metade de baixo (f–j) não é usada</text>
-
-  <!-- R1: c10 → c15 -->
-  <path d="M268 297 V288 H306 M346 288 H388 V297" stroke="#5F5E5A" stroke-width="2" fill="none"/>
-  <rect x="306" y="281" width="40" height="14" rx="6" fill="#D85A30"/>
-  <text x="326" y="278" font-size="12" font-weight="700" fill="#993C1D" text-anchor="middle">R1</text>
-  <!-- R2: a15 → trilha azul (coluna 19) -->
-  <path d="M388 261 V250 C 400 246, 410 246, 420 246 M456 246 H484 V231" stroke="#5F5E5A" stroke-width="2" fill="none"/>
-  <rect x="420" y="239" width="36" height="14" rx="6" fill="#D85A30"/>
-  <circle cx="484" cy="231" r="3" fill="#5F5E5A"/><circle cx="388" cy="261" r="3" fill="#5F5E5A"/>
-  <circle cx="268" cy="297" r="3" fill="#5F5E5A"/><circle cx="388" cy="297" r="3" fill="#5F5E5A"/>
-  <text x="438" y="268" font-size="12" font-weight="700" fill="#993C1D" text-anchor="middle">R2</text>
-
-  <!-- jumpers do ESP32 -->
-  <path d="M40 20 C 5 60, 5 180, 76 231" stroke="#2C2C2A" stroke-width="3" fill="none"/>
-  <circle cx="76" cy="231" r="4" fill="#2C2C2A"/>
-  <text x="4" y="176" font-size="11" fill="#2C2C2A">J1</text>
-  <path d="M65 141 C 70 170, 110 190, 124 231" stroke="#534AB7" stroke-width="3" fill="none"/>
-  <circle cx="124" cy="231" r="4" fill="#534AB7"/>
-  <text x="104" y="174" font-size="11" fill="#534AB7">J2 (EN)</text>
-  <path d="M115 20 C 200 -20, 490 20, 470 120 C 455 190, 400 220, 388 315" stroke="#EF9F27" stroke-width="3" fill="none"/>
-  <circle cx="388" cy="315" r="4" fill="#EF9F27"/>
-  <text x="474" y="120" font-size="11" fill="#BA7517">J4 (TX) → d15</text>
-
-  <!-- ponto de medida -->
-  <circle cx="388" cy="333" r="7" fill="none" stroke="#185FA5" stroke-width="2"/>
-  <text x="400" y="340" font-size="11" fill="#185FA5">medir e15 ↔ trilha azul: ~2,85 V</text>
-
-  <!-- conector da moto -->
-  <rect x="470" y="520" width="90" height="44" rx="4" fill="#2C2C2A"/>
-  <circle cx="490" cy="542" r="7" fill="#EFC000"/><circle cx="515" cy="542" r="7" fill="#1D9E75"/><circle cx="540" cy="542" r="7" fill="#888780"/>
-  <text x="515" y="582" font-size="12" fill="#444441" text-anchor="middle">conector da moto (amarelo fica livre)</text>
-  <path d="M268 333 C 260 520, 470 500, 515 535" stroke="#1D9E75" stroke-width="3" fill="none"/>
-  <circle cx="268" cy="333" r="4" fill="#1D9E75"/>
-  <text x="190" y="520" font-size="11" fill="#0F6E56">J5: e10 → VERDE</text>
-  <path d="M604 231 C 670 240, 670 520, 540 535" stroke="#2C2C2A" stroke-width="3" fill="none"/>
-  <circle cx="604" cy="231" r="4" fill="#2C2C2A"/>
-  <text x="635" y="508" font-size="11" fill="#2C2C2A" text-anchor="end">J3: trilha azul → PRETO</text>
+  <g id="nums" font-size="11" font-weight="700" fill="#444441" text-anchor="middle" stroke="#F4F2EC" stroke-width="4" paint-order="stroke"></g>
 </svg>
-<p class="ok"><b>Etapa A conferida (01/11):</b> amarelo 0 V desligada e ligada · verde 0 V desligada →
-<b>5,70 V ligada, parado</b>. O verde só acende com a moto ligada, e 5,7 V parado é o jeito de uma saída serial
-de 5 V em repouso. Pode ser também uma alimentação de 5 V para acessório, e o teste B vai dizer qual das duas.
-O amarelo em 0 V deve ser a entrada da controladora (RX) e <b>fica livre</b>: nada é ligado nele.</p>
-<p class="warn"><b>5,7 V é demais para o ESP32</b>, que aceita no máximo 3,6 V. Com o divisor <b>R1 + R2</b>
-(dois resistores <b>iguais</b>), chega metade da tensão ao pino TX: 5,7 V vira ~2,85 V, e mesmo se a linha
-subir a 6 V fica em 3,0 V. Use dois resistores iguais de 4,7 kΩ a 10 kΩ (10 kΩ carrega menos a linha). O R3 não
-entra: com R2 + R3 sobrariam 3,8 V, acima do limite.</p>
-<p class="info"><b>Como a protoboard funciona.</b> Na protoboard comum (branca, com números 1…63 e letras a…j), os
-<b>5 furos de cada número</b> (a, b, c, d, e) são ligados por dentro. A <b>trilha azul (−)</b> da borda é ligada de
-ponta a ponta, e é ela que será o GND. Os números do desenho são só exemplo: serve qualquer coluna livre, desde que
-<b>R1 e o fio verde (J5) fiquem numa coluna</b> e <b>R1, R2 e o TX (J4) fiquem na outra</b>. Se o ESP32 estiver espetado na
-protoboard, use colunas longe dele e ligue os pinos com jumpers fêmea‑macho. Os resistores não têm lado.</p>
-<ol>
-  <li><b>Notebook só na bateria</b> (tire o carregador da tomada). ESP32 no notebook pelo cabo USB de dados.</li>
-  <li><b>J1:</b> pino <b>GND</b> do ESP32 → qualquer furo da <b>trilha azul (−)</b>.</li>
-  <li><b>J2:</b> pino <b>EN</b> do ESP32 → outro furo da <b>trilha azul (−)</b>. O LED/Bluetooth apaga: o chip parou e o pino TX
-    passa a ser a entrada do notebook. Tirando o J2, o gateway volta ao normal.</li>
-  <li><b>R1:</b> uma perna no furo <b>c10</b>, a outra no <b>c15</b>.</li>
-  <li><b>R2:</b> uma perna no furo <b>a15</b>, a outra na <b>trilha azul (−)</b>.</li>
-  <li><b>Ainda sem o J4.</b> Com a <b>moto desligada</b>, ligue o <b>J3</b> (trilha azul → pino <b>preto</b> do conector) e o
-    <b>J5</b> (furo <b>e10</b> → pino <b>verde</b>). Não ligue nada no amarelo.</li>
-  <li><b>Conferência com o multímetro:</b> ligue a moto. Ponta preta na <b>trilha azul</b>, ponta vermelha no furo <b>e15</b>
-    (o círculo azul do desenho). Deve dar <b>~2,8–3,0 V</b>.
-    <b>Se passar de 3,3 V, pare</b>: os resistores não são iguais ou estão no furo errado. Desligue a moto.</li>
-  <li>Moto desligada: ligue o <b>J4</b> (pino <b>TX</b> do ESP32 → furo <b>d15</b>).</li>
-  <li><b>Ligue a moto</b> e me avise: eu rodo <code>scripts/moto/uart-sniff.ps1 -Fase verde-ligada</code>. Ele escuta 8 velocidades
-    (115200, 9600, 19200…) e guarda os bytes. Se der para fazer com segurança, gire o acelerador de leve com a roda
-    no ar, ou ao menos acenda o farol e a seta, para os números mudarem.</li>
-</ol>
+<p class="info">Na protoboard, os <b>5 furos de cada número</b> (a, b, c, d, e) são ligados por dentro: cada coluna é um
+“fio”. A montagem usa só <b>3 colunas</b>. Os números são exemplo: escolha 3 colunas livres, longe do ESP32, com
+espaço de uns 5 furos entre elas para os resistores. O que importa: <b>SINAL</b> (verde + R1), <b>TX</b> (R1 + R2 + TX do
+ESP32), <b>GND</b> (R2 + GND + EN do ESP32 + preto da moto).</p>
+</section>
+
+<section><h2>Passo a passo (marque cada um)</h2>
+<div class="passo"><input type="checkbox"><div><span class="n">1.</span> <b>Moto desligada.</b> Tire da protoboard
+  <b>tudo</b> da tentativa 1 (jumpers e resistores). Deixe o ESP32 no notebook pelo cabo USB, notebook só na bateria.</div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">2.</span> <b>Meça os dois resistores</b> fora da protoboard:
+  multímetro em <b>Ω, escala 20k</b>, uma ponta em cada perna. Os dois precisam dar <b>o mesmo valor</b>, entre 1k e 10k.
+  <div style="margin-top:6px">R1: <input type="text" id="r1" placeholder="ex.: 4,7k"> &nbsp; R2: <input type="text" id="r2" placeholder="ex.: 4,7k"></div>
+  <div id="vr" class="b">Cores comuns: 4,7k = amarelo‑violeta‑vermelho · 10k = marrom‑preto‑laranja · 1k = marrom‑preto‑vermelho.
+    220 Ω (vermelho‑vermelho‑marrom) e 100 Ω (marrom‑preto‑marrom) <b>não servem</b>.</div></div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">3.</span> <b>Resistores:</b> <b>R1</b> do furo <b>c5</b> ao
+  <b>c10</b>. <b>R2</b> do furo <b>d10</b> ao <b>d15</b>.</div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">4.</span> <b>ESP32:</b> <b>J1</b> do pino <b>GND</b> ao furo
+  <b>a15</b>. <b>J2</b> do pino <b>EN</b> ao furo <b>b15</b>. O LED/Bluetooth apaga (placa parada). <b>Ainda não ligue o TX.</b></div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">5.</span> <b>Moto (desligada):</b> <b>J3</b> do pino
+  <b>preto</b> do conector ao furo <b>c15</b>. <b>J5</b> do pino <b>verde</b> ao furo <b>a5</b>. Amarelo livre.</div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">6.</span> <b>Conferência:</b> ligue a moto. Multímetro em
+  <b>V⎓ 20 V</b>: ponta <b>vermelha no e10</b>, ponta <b>preta no e15</b>.
+  <div style="margin-top:6px">Leitura: <input type="text" id="vt" placeholder="V"></div>
+  <div id="vv" class="b">Esperado: 2,6–3,1 V. Acima de 3,3 V: pare.</div></div></div>
+
+<div class="passo"><input type="checkbox"><div><span class="n">7.</span> <b>Desligue a moto.</b> Ligue o <b>J4</b>: pino
+  <b>TX</b> do ESP32 ao furo <b>a10</b>. Me avise: eu começo a escuta e digo quando ligar a moto.</div></div>
 </section>
 
 <section><h2>O que cada resultado quer dizer</h2>
 <table>
   <tr><th>Resultado</th><th>Leitura</th><th>Próximo passo</th></tr>
-  <tr><td>Bytes numa velocidade, poucos erros, padrão que se repete</td><td>linha serial da controladora/painel transmitindo</td>
-    <td>eu decodifico (comparo com protocolos públicos Votol/Fardriver) e procuro velocidade/tensão/corrente nos bytes; depois firmware 1.4 lê no pino 16 e manda ao app por Bluetooth</td></tr>
-  <tr><td>Linha parada em ~3,3/5 V e nenhum byte</td><td>porta de programação esperando pedido (só responde a comando)</td>
-    <td>parar aqui; enviar comando é leitura ativa (nível 5) — decisão sua, com protocolo identificado</td></tr>
-  <tr><td>Linhas em ~0 V</td><td>entrada de acessório (a moto espera sinal, não envia)</td><td>não serve para dados; deixar solto</td></tr>
-  <tr><td>Acima de 6 V</td><td>alimentação, não sinal</td><td>não ligar o ESP32</td></tr>
+  <tr><td>Bytes numa velocidade, poucos erros, padrão que se repete</td><td>controladora transmitindo sozinha</td>
+    <td>eu decodifico (comparo com protocolos Votol/Fardriver) e procuro velocidade, tensão, corrente; depois firmware 1.4 lê no pino 16 e manda ao app do PC</td></tr>
+  <tr><td>0 bytes com a conferência do passo 6 certa</td><td>porta de programação esperando pedido, ou alimentação de 5 V</td>
+    <td>parar a escuta passiva; mandar pedido é leitura ativa (nível 5) — decisão sua, com o modelo da controladora identificado</td></tr>
 </table>
-<p class="b">Fotos úteis: o conector de perto, a etiqueta da controladora (marca/modelo) e para onde os 3 fios vão.
-Nada é gravado na moto; o ESP32 fica parado e só passa o sinal para o notebook.</p>
+<p class="b">Ajuda muito: foto da <b>etiqueta da controladora</b> (marca/modelo) e de para onde vão os 3 fios.</p>
 </section>
 </main>
 <script>
-const n = id => { const v = parseFloat((document.getElementById(id).value || '').replace(',', '.')); return isNaN(v) ? null : v; };
-function veredito() {
-  const y = n('ay1'), g = n('ag1'), fy = document.getElementById('fy').value, fg = document.getElementById('fg').value;
-  const el = document.getElementById('veredito');
-  if (y === null && g === null) { el.className = 'b'; el.textContent = 'Preencha as medidas com a moto ligada para ver o que fazer.'; return; }
-  const all = [n('ay0'), n('ag0'), y, g].filter(v => v !== null);
-  if (all.some(v => v > 6 || v < -0.5)) { el.className = 'warn'; el.innerHTML = '<b>Pare:</b> há leitura acima de 6 V ou negativa — não é linha de sinal (ou o preto não é o GND). Não ligue o ESP32; me mande os números.'; return; }
-  const lines = [['amarelo', y, fy], ['verde', g, fg]].filter(l => l[1] !== null);
-  const vivo = lines.filter(l => l[1] >= 2.5).sort((a, b) => (b[2] === 't') - (a[2] === 't'));
-  if (!vivo.length) { el.className = 'info'; el.innerHTML = 'As duas linhas ficam perto de 0 V: provavelmente <b>entrada de acessório</b> (a moto espera sinal, não envia). Me mande os números; a etapa B quase certamente não vai mostrar dados.'; return; }
-  const [nome, v, f] = vivo[0];
-  const vv = v.toFixed(1).replace('.', ',');
-  const div = v >= 3.8 ? 'com o divisor <b>R1 + R2</b> iguais (a linha tem ~' + vv + ' V e chegam ~' + (v / 2).toFixed(2).replace('.', ',') + ' V ao TX)' : 'só com <b>R1</b> (sem R2, a linha tem ~' + vv + ' V)';
-  el.className = 'ok';
-  el.innerHTML = 'Linha com tensão: <b>' + nome + '</b>' + (f === 't' ? ' e <b>tremendo</b> — forte sinal de dados saindo.' : (f === 'p' ? ' (parada — pode ser serial em repouso ou alimentação de 5 V; o teste diz).' : '.')) +
-    '<br>Faça a <b>etapa B</b> ' + div + ', com o J5 no <b>' + nome + '</b>.';
+// furos da metade de cima: colunas 3–16, linhas a–e
+const g = document.getElementById('furos'), ns = 'http://www.w3.org/2000/svg';
+for (let c = 3; c <= 16; c++) for (let r = 0; r < 5; r++) {
+  const q = document.createElementNS(ns, 'rect'), x = 40 + (c - 3) * 34, y = 80 + r * 30;
+  q.setAttribute('x', x - 3); q.setAttribute('y', y - 3); q.setAttribute('width', 6); q.setAttribute('height', 6); g.appendChild(q);
+  if (r === 0) { const t = document.createElementNS(ns, 'text'); t.setAttribute('x', x); t.setAttribute('y', 72);
+    t.textContent = c; document.getElementById('nums').appendChild(t); }
 }
-document.querySelectorAll('input,select').forEach(e => e.addEventListener('input', veredito));
-// medidas da etapa A feitas em 01/11/2026
-Object.entries({ ay0: '0', ay1: '0', ag0: '0', ag1: '5,70', fy: 'p', fg: 'p' }).forEach(([k, v]) => document.getElementById(k).value = v);
-veredito();
+const ohm = id => { const s = (document.getElementById(id).value || '').trim().toLowerCase().replace(',', '.');
+  const v = parseFloat(s); return isNaN(v) ? null : (s.includes('k') ? v * 1000 : (v < 100 && s.indexOf('.') > -1 ? v * 1000 : v)); };
+function resist() {
+  const a = ohm('r1'), b = ohm('r2'), el = document.getElementById('vr');
+  if (a === null || b === null) return;
+  const iguais = Math.abs(a - b) / Math.max(a, b) <= 0.05, faixa = [a, b].every(v => v >= 900 && v <= 11000);
+  if (iguais && faixa) { el.className = 'ok'; el.textContent = 'Resistores iguais e na faixa: pode montar. Vão chegar ~2,85 V ao TX.'; }
+  else { el.className = 'warn'; el.innerHTML = 'Não servem: ' + (!iguais ? 'os dois têm que ser <b>iguais</b>' : 'use valores <b>entre 1k e 10k</b>') + '. Com estes, o TX receberia ~' +
+    (5.7 * b / (a + b)).toFixed(1).replace('.', ',') + ' V (limite 3,3 V).'; }
+}
+function tensao() {
+  const v = parseFloat((document.getElementById('vt').value || '').replace(',', '.')), el = document.getElementById('vv');
+  if (isNaN(v)) return;
+  if (v > 3.3) { el.className = 'warn'; el.innerHTML = '<b>Pare e desligue a moto.</b> Acima de 3,3 V: confira se R2 está mesmo do d10 ao d15 e se o preto está no c15. Me mande uma foto.'; }
+  else if (v >= 2.5) { el.className = 'ok'; el.textContent = 'Certo: o divisor está funcionando. Siga para o passo 7.'; }
+  else if (v < 0.3) { el.className = 'warn'; el.textContent = 'Quase 0 V: o verde não está chegando (J5 solto ou fora do a5), ou a moto está desligada. Confira e meça de novo.'; }
+  else { el.className = 'info'; el.textContent = 'Baixo, mas seguro. Pode seguir, e me diga o valor.'; }
+}
+['r1', 'r2'].forEach(i => document.getElementById(i).addEventListener('input', resist));
+document.getElementById('vt').addEventListener('input', tensao);
+document.querySelectorAll('.passo input[type=checkbox]').forEach(c => c.addEventListener('change', () => c.parentElement.classList.toggle('feito', c.checked)));
 </script>
 </body></html>
