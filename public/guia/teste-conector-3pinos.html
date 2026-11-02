@@ -30,7 +30,12 @@ code{background:#f3f3f3;padding:1px 4px;border-radius:4px;font-size:13px}
   <tr><td>depois</td><td>Conferência do divisor (ponto TX)</td>
     <td><b>5,57 V</b> (devia dar ~2,85 V) → <b>montagem errada</b>: a escuta da tentativa 1 não vale. Provável causa:
       resistores de valores diferentes, ou o R2 sem chegar ao GND (trilha azul cortada no meio).</td></tr>
-  <tr><td><b>agora</b></td><td colspan="2"><b>Tentativa 2</b>: montagem nova, mais simples, <b>sem usar a trilha azul</b>, só 3 colunas da protoboard. Siga abaixo.</td></tr>
+  <tr><td>01/11 noite</td><td><b>Tentativa 2</b> (linhas 4/9/14): divisor corrigido</td>
+    <td>2,80 V em cada resistor ✓ — mas ao ligar o ponto do meio em <b>qualquer</b> pino do ESP32 (TX, 16, 34) a linha cai para ~0,46 V</td></tr>
+  <tr><td>02/11 madrugada</td><td>Diagnóstico: terra, energia, pino, jumpers, notebook, power bank, bancada com 3,3 V, V~, firmware 1.4.1 com "osciloscópio" no pino 34</td>
+    <td>ESP32 e montagem ok. Com a moto ligada a linha fica <b>parada em baixo, sem pulso nem dado</b> → provável porta que só responde a pedido</td></tr>
+  <tr><td><b>agora</b></td><td colspan="2"><b>Pausado.</b> Próximo: foto da etiqueta da controladora. Enviar pedido (nível 5) só por decisão do dono.
+    Detalhes: <code>docs/vehicle-evidence/capturas/2026-11-01-conector-3pinos.md</code>. A montagem abaixo fica como referência.</td></tr>
 </table>
 <p class="b">O que o verde pode ser: <b>saída serial da controladora em repouso</b> (porta de programação, nível alto parado
 até alguém pedir dados), ou <b>alimentação de 5 V</b> de acessório. O amarelo em 0 V não é saída serial; deve ser a
