@@ -28,7 +28,7 @@
 #include "secrets.h"  // copie de secrets.example.h
 
 #define FW_NAME "esp32-gateway"
-#define FW_VERSION "1.3.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
+#define FW_VERSION "1.4.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
 #define FW_ANNOUNCE_MS 10000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
@@ -42,6 +42,18 @@
 #define BENCH_ADC_PIN 34
 #define BENCH_DIN_PIN 27
 #define BENCH_TOUCH_PIN 13
+
+// Escuta serial da moto (1.4.0) — SOMENTE RECEPÇÃO: a UART2 é aberta sem pino de TX, nada é enviado.
+// Ligação (guia public/guia/teste-conector-3pinos.html): fio de sinal → divisor R1+R2 iguais → GPIO16; GND comum.
+// Nunca ligue a linha direto no GPIO16: ele aceita no máximo 3,3 V.
+// Procura a velocidade sozinha (5 s em cada) e trava na que der bytes com poucos erros de quadro.
+//   canais: u2b velocidade em uso · u2n bytes no período · u2e erros de quadro/break no período · u2l 1 = travada
+//   log:    "# u2 baud=... n=... err=... hex=AA BB ..." (até 48 bytes por período) para decodificar no PC
+#define MOTO_RX_PIN 16
+#define U2_DWELL_MS 5000
+#define U2_IDLE_UNLOCK_MS 30000
+const uint32_t U2_BAUDS[] = {115200, 9600, 19200, 38400, 57600, 4800, 2400, 1200};
+const int U2_NBAUDS = sizeof U2_BAUDS / sizeof U2_BAUDS[0];
 
 // Nordic UART Service (padrão de fato para UART sobre BLE)
 #define NUS_SERVICE "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -61,6 +73,64 @@ bool dsFresh = false;       // primeira conversão após achar o sensor (85,00 �
 String dsId;                // "28-AABBCCDDEEFF" (formato do Linux/1-Wire)
 const char* dsState = "ausente";  // ok · ausente · parasita (sem VCC: fio vermelho fora do 3V3) · reset (85 °C)
 int httpCount = 0;
+// escuta da moto (UART2, só RX)
+int u2Idx = 0;
+bool u2Locked = false;
+uint32_t u2Since = 0, u2LastByte = 0, u2Bytes = 0, u2Good = 0;
+volatile uint32_t u2Errors = 0;
+uint8_t u2Hex[48];
+int u2HexN = 0;
+
+void u2Open() {
+  Serial2.end();
+  Serial2.setRxBufferSize(12288);  // cobre a leitura do DS18B20 (~750 ms parada) a 115200 baud
+  Serial2.onReceiveError([](hardwareSerial_error_t) { u2Errors++; });
+  Serial2.begin(U2_BAUDS[u2Idx], SERIAL_8N1, MOTO_RX_PIN, -1);  // TX = -1: sem pino de transmissão
+  u2Since = millis();
+  u2Good = 0;
+}
+
+void u2Poll() {
+  while (Serial2.available()) {
+    uint8_t b = Serial2.read();
+    u2Bytes++;
+    u2LastByte = millis();
+    if (u2HexN < (int)sizeof u2Hex) u2Hex[u2HexN++] = b;
+  }
+}
+
+// chamado a cada período de amostra: publica o log em hexa e decide velocidade/trava
+void u2Report(uint32_t& n, uint32_t& err) {
+  n = u2Bytes;
+  err = u2Errors;
+  if (n || err) {
+    String hex;
+    for (int i = 0; i < u2HexN; i++) {
+      char h[4];
+      snprintf(h, sizeof h, "%02X ", u2Hex[i]);
+      hex += h;
+    }
+    Serial.printf("# u2 baud=%lu n=%lu err=%lu hex=%s\n", (unsigned long)U2_BAUDS[u2Idx], (unsigned long)n,
+                  (unsigned long)err, hex.c_str());
+  }
+  bool good = n >= 8 && err * 10 < n;
+  u2Good = good ? u2Good + 1 : 0;
+  if (!u2Locked && u2Good >= 2) {
+    u2Locked = true;
+    Serial.printf("# u2 travada em %lu baud\n", (unsigned long)U2_BAUDS[u2Idx]);
+  }
+  if (u2Locked && millis() - u2LastByte > U2_IDLE_UNLOCK_MS) {
+    u2Locked = false;
+    Serial.println("# u2 sem bytes ha 30 s: volta a procurar a velocidade");
+  }
+  u2Bytes = 0;
+  u2Errors = 0;
+  u2HexN = 0;
+  if (!u2Locked && millis() - u2Since >= U2_DWELL_MS) {
+    u2Idx = (u2Idx + 1) % U2_NBAUDS;
+    u2Open();
+  }
+}
 
 class ServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer*, NimBLEConnInfo&) override {
@@ -163,6 +233,7 @@ void setup() {
   pinMode(BENCH_DIN_PIN, INPUT_PULLUP);
   analogSetPinAttenuation(BENCH_ADC_PIN, ADC_11db);  // faixa até ~3,1 V
   setupBle();
+  u2Open();
   if (wifiEnabled()) {
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -173,6 +244,7 @@ void setup() {
 void loop() {
   static uint32_t last = 0;
   static uint32_t lastAnnounce = 0;
+  u2Poll();
   if (millis() - lastAnnounce >= FW_ANNOUNCE_MS) {
     lastAnnounce = millis();
     announceFirmware();
@@ -207,6 +279,10 @@ void loop() {
   String ch = String("\"v34\":") + String(analogReadMilliVolts(BENCH_ADC_PIN) / 1000.0, 3) +
               ",\"d27\":" + String(digitalRead(BENCH_DIN_PIN)) + ",\"tq13\":" + String(touchRead(BENCH_TOUCH_PIN));
   if (hasTemp) ch = String("\"t1\":") + String(t, 2) + "," + ch;
+  uint32_t u2n, u2e;
+  u2Report(u2n, u2e);
+  ch += ",\"u2b\":" + String(U2_BAUDS[u2Idx]) + ",\"u2n\":" + String(u2n) + ",\"u2e\":" + String(u2e) +
+        ",\"u2l\":" + String(u2Locked ? 1 : 0);
   String line = String("{\"v\":1,\"dev\":\"") + DEVICE_ID + "\",\"seq\":" + String(seq++) + ts + ",\"ch\":{" + ch +
                 "},\"st\":{\"rssi\":" + String(WiFi.RSSI()) + ",\"up\":" + String(millis() / 1000) +
                 ",\"heap\":" + String(ESP.getFreeHeap() / 1024) + ",\"ble\":" + String(bleClient ? 1 : 0) +

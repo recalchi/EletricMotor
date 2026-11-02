@@ -76,24 +76,24 @@ Não tocar em fios grossos nem nos conectores da bateria (72 V).</p>
   <rect x="535" y="250" width="30" height="22" rx="4" fill="#888780"/>
   <text x="550" y="288" font-size="11" fill="#5F5E5A" text-anchor="middle">USB → notebook</text>
   <g fill="#BA7517"><rect x="458" y="56" width="8" height="8"/><rect x="458" y="76" width="8" height="8"/><rect x="458" y="96" width="8" height="8"/>
-    <rect x="458" y="116" width="8" height="8"/><rect x="458" y="136" width="8" height="8"/>
+    <rect x="458" y="116" width="8" height="8"/><rect x="458" y="136" width="8" height="8"/><rect x="458" y="226" width="8" height="8"/>
     <rect x="634" y="56" width="8" height="8"/><rect x="634" y="76" width="8" height="8"/><rect x="634" y="96" width="8" height="8"/></g>
   <g font-size="11" fill="#F1EFE8">
     <text x="472" y="64" font-weight="700" fill="#FAC775">GND</text><text x="472" y="84">23</text><text x="472" y="104">22</text>
-    <text x="472" y="124" font-weight="700" fill="#FAC775">TX</text><text x="472" y="144">RX</text>
-    <text x="628" y="64" text-anchor="end">3V3</text><text x="628" y="84" text-anchor="end" font-weight="700" fill="#FAC775">EN</text><text x="628" y="104" text-anchor="end">VP</text>
+    <text x="472" y="124">TX</text><text x="472" y="144">RX</text><text x="472" y="164">⋮</text><text x="472" y="234" font-weight="700" fill="#FAC775">16 (RX2)</text>
+    <text x="628" y="64" text-anchor="end">3V3</text><text x="628" y="84" text-anchor="end">EN</text><text x="628" y="104" text-anchor="end">VP</text>
   </g>
-  <text x="550" y="200" font-size="10" fill="#D3D1C7" text-anchor="middle">um lado: GND 1º, TX 4º</text>
-  <text x="550" y="215" font-size="10" fill="#D3D1C7" text-anchor="middle">outro lado: EN 2º</text>
+  <text x="560" y="200" font-size="10" fill="#D3D1C7" text-anchor="middle">mesmo lado do GND:</text>
+  <text x="560" y="215" font-size="10" fill="#D3D1C7" text-anchor="middle">16 fica entre o 17 e o 4</text>
 
   <!-- fios -->
   <path d="M325 424 C 400 424, 410 60, 460 60" stroke="#2C2C2A" stroke-width="3.5" fill="none"/>
-  <path d="M295 424 C 300 470, 690 470, 672 200 C 668 120, 660 80, 640 80" stroke="#534AB7" stroke-width="3.5" fill="none"/>
-  <path d="M325 284 C 400 284, 410 120, 460 120" stroke="#E0B000" stroke-width="3.5" fill="none" stroke-dasharray="7 4"/>
+  
+  <path d="M325 284 C 400 284, 410 230, 460 230" stroke="#E0B000" stroke-width="3.5" fill="none" stroke-dasharray="7 4"/>
   <path d="M325 144 C 440 150, 440 520, 525 580" stroke="#1D9E75" stroke-width="3.5" fill="none"/>
   <path d="M265 424 C 265 540, 480 530, 555 580" stroke="#444441" stroke-width="3.5" fill="none"/>
   <g><circle cx="325" cy="144" r="6" fill="#1D9E75"/><circle cx="325" cy="284" r="6" fill="#E0B000"/>
-    <circle cx="325" cy="424" r="6" fill="#2C2C2A"/><circle cx="295" cy="424" r="6" fill="#534AB7"/><circle cx="265" cy="424" r="6" fill="#444441"/></g>
+    <circle cx="325" cy="424" r="6" fill="#2C2C2A"/><circle cx="265" cy="424" r="6" fill="#444441"/></g>
 
   <!-- conector da moto -->
   <rect x="470" y="565" width="110" height="40" rx="4" fill="#2C2C2A"/>
@@ -115,9 +115,9 @@ Não tocar em fios grossos nem nos conectores da bateria (72 V).</p>
     <text x="232" y="268" fill="#854F0B">linha 9 = TX</text>
     <text x="232" y="408" fill="#2C2C2A">linha 14 = GND</text>
     <text x="420" y="300" fill="#0F6E56">verde → fio VERDE da moto</text>
-    <text x="355" y="170" fill="#9A7A00">jumper amarelo → TX (por último)</text>
+    <text x="355" y="170" fill="#9A7A00">jumper amarelo → GPIO16 (por último)</text>
     <text x="352" y="52" fill="#2C2C2A">preto → GND do ESP32</text>
-    <text x="560" y="462" fill="#534AB7">roxo → EN do ESP32</text>
+    <text x="470" y="470" fill="#534AB7">roxo (EN): não usar mais</text>
     <text x="270" y="520" fill="#444441">preto → fio PRETO da moto</text>
   </g>
 </svg>
@@ -130,7 +130,7 @@ preto da moto). O erro da foto: a perna de baixo do <b>R2</b> estava uma linha a
 
 <section><h2>Passo a passo (marque cada um)</h2>
 <div class="passo"><input type="checkbox"><div><span class="n">1.</span> <b>Moto desligada.</b> ESP32 no notebook pelo cabo
-  USB, notebook só na bateria. Jumper amarelo (TX) <b>solto do ESP32</b>.</div></div>
+  USB, notebook só na bateria. Jumper amarelo <b>solto do ESP32</b>.</div></div>
 
 <div class="passo"><input type="checkbox"><div><span class="n">2.</span> <b>Meça os dois resistores</b> fora da protoboard:
   multímetro em <b>Ω, escala 20k</b>, uma ponta em cada perna. Os dois precisam dar <b>o mesmo valor</b>, entre 1k e 10k.
@@ -143,19 +143,18 @@ preto da moto). O erro da foto: a perna de baixo do <b>R2</b> estava uma linha a
   da <b>mesma linha</b> dos fios, não na linha de baixo nem na beirada.</div></div>
 
 <div class="passo"><input type="checkbox"><div><span class="n">4.</span> <b>Linha 14:</b> preto do <b>GND</b> do ESP32 no
-  <b>A14</b>, roxo do <b>EN</b> no <b>B14</b>, preto que vai à moto no <b>C14</b>. O LED/Bluetooth do ESP32 apaga (placa parada).</div></div>
+  <b>A14</b>, roxo do <b>EN</b> no <b>B14</b>, preto que vai à moto no <b>C14</b>. <b>Roxo (EN) não é mais usado</b>: o ESP32 fica funcionando, com o firmware 1.4 que só escuta.</div></div>
 
 <div class="passo"><input type="checkbox"><div><span class="n">5.</span> <b>Linha 4:</b> verde que vai à moto no <b>A4</b>.
   Na moto (desligada): verde no pino <b>verde</b>, preto no pino <b>preto</b>. Amarelo da moto livre.
-  <b>Linha 9:</b> jumper amarelo no <b>A9</b>, ainda solto do ESP32.</div></div>
+  <b>Linha 9:</b> jumper amarelo no <b>A9</b>, ainda solto do ESP32 (depois vai no pino 16).</div></div>
 
 <div class="passo"><input type="checkbox"><div><span class="n">6.</span> <b>Conferência:</b> ligue a moto. Multímetro em
   <b>V⎓ 20 V</b> com as pontas <b>direto no metal das pernas do R2</b>: vermelha na perna da linha 9, preta na perna da linha 14.
   <div style="margin-top:6px">Leitura: <input type="text" id="vt" placeholder="V"></div>
   <div id="vv" class="b">Esperado: 2,6–3,1 V. Acima de 3,3 V: pare.</div></div></div>
 
-<div class="passo"><input type="checkbox"><div><span class="n">7.</span> <b>Desligue a moto.</b> Ligue a outra ponta do
-  jumper amarelo no pino <b>TX</b> do ESP32. Me avise: eu começo a escuta e digo quando ligar a moto.</div></div>
+<div class="passo"><input type="checkbox"><div><span class="n">7.</span> <b>Desligue a moto.</b> Ligue a outra ponta do jumper amarelo no pino <b>16</b> do ESP32 (às vezes escrito <b>RX2</b> ou <b>G16</b>; fica no mesmo lado do GND, entre o 17 e o 4). <b>Nunca no TX.</b> Me avise: eu começo a escuta e digo quando ligar a moto.</div></div>
 </section>
 
 <section><h2>O que cada resultado quer dizer</h2>
