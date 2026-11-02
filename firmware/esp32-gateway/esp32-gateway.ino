@@ -28,7 +28,7 @@
 #include "secrets.h"  // copie de secrets.example.h
 
 #define FW_NAME "esp32-gateway"
-#define FW_VERSION "1.4.0"      // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
+#define FW_VERSION "1.4.1"     // suba a cada gravação; o app EletricMotor lê esta linha para gerenciar atualizações
 #define ONE_WIRE_PIN 4
 #define FW_ANNOUNCE_MS 10000    // reanuncia a versão periodicamente (o app pode conectar depois do boot)
 #define SAMPLE_MS 2000          // período de leitura
@@ -52,6 +52,8 @@
 #define MOTO_RX_PIN 16
 #define U2_DWELL_MS 5000
 #define U2_IDLE_UNLOCK_MS 30000
+#define V34_BURST_N 2000        // rajada de leituras no pino 34 (~80 ms): mostra se a linha é contínua ou pulsada
+#define V34_EDGE_MV 1200        // limiar para contar subidas/descidas na rajada
 const uint32_t U2_BAUDS[] = {115200, 9600, 19200, 38400, 57600, 4800, 2400, 1200};
 const int U2_NBAUDS = sizeof U2_BAUDS / sizeof U2_BAUDS[0];
 
@@ -275,8 +277,25 @@ void loop() {
   time_t now = time(nullptr);
   String ts = now > 1700000000 ? String(",\"ts\":") + String((uint64_t)now * 1000ULL) : String("");
 
+  // Rajada no pino 34: mínimo, máximo, média e número de cruzamentos do limiar (osciloscópio pobre)
+  uint32_t vLo = UINT32_MAX, vHi = 0, vSum = 0, vEdges = 0;
+  uint32_t vT0 = micros();
+  bool vHigh = false;
+  for (int i = 0; i < V34_BURST_N; i++) {
+    uint32_t mv = analogReadMilliVolts(BENCH_ADC_PIN);
+    vLo = min(vLo, mv); vHi = max(vHi, mv); vSum += mv;
+    bool h = mv > V34_EDGE_MV;
+    if (i && h != vHigh) vEdges++;
+    vHigh = h;
+  }
+  uint32_t vUs = micros() - vT0;
+  Serial.printf("# v34 burst n=%d us=%lu min=%lu max=%lu avg=%lu edges=%lu\n", V34_BURST_N, (unsigned long)vUs,
+                (unsigned long)vLo, (unsigned long)vHi, (unsigned long)(vSum / V34_BURST_N), (unsigned long)vEdges);
+
   // A partir da 1.1.0 sempre publica: os canais de bancada permitem testar o caminho completo só com o ESP32
   String ch = String("\"v34\":") + String(analogReadMilliVolts(BENCH_ADC_PIN) / 1000.0, 3) +
+              ",\"v34lo\":" + String(vLo / 1000.0, 3) + ",\"v34hi\":" + String(vHi / 1000.0, 3) +
+              ",\"v34x\":" + String(vEdges) +
               ",\"d27\":" + String(digitalRead(BENCH_DIN_PIN)) + ",\"tq13\":" + String(touchRead(BENCH_TOUCH_PIN));
   if (hasTemp) ch = String("\"t1\":") + String(t, 2) + "," + ch;
   uint32_t u2n, u2e;
