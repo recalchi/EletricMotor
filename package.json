@@ -16,7 +16,6 @@
     "apk": "powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1",
     "cap:sync": "cap sync android",
     "scans:pull": "node scripts/pull-scans.mjs",
-    "rules:deploy": "firebase deploy --only firestore:rules",
     "hw:flash": "tsx scripts/hw/flash.ts",
     "hw:smoke": "tsx scripts/hw/smoke.ts",
     "hw:monitor": "tsx scripts/hw/monitor.ts",
