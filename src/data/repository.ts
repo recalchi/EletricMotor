@@ -10,6 +10,7 @@ export type CollectionName =
   | 'inspections'
   | 'chargingSessions'
   | 'batteryReadings'
+  | 'dashboardReadings'
   | 'symptoms'
   | 'alerts'
   | 'auditLog'

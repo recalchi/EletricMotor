@@ -172,6 +172,26 @@ export interface ManualBatteryReading {
   source: string; // ex.: "painel TFT", "multímetro (com isolamento adequado)"
 }
 
+/** Modos de condução mostrados no painel TFT da EVS (losangos verde/azul/vermelho). */
+export type RidingMode = 'eco' | 'sport' | 'turbo';
+
+/**
+ * O que o dono LEU no painel TFT da moto e digitou no app. É observação manual (não é telemetria nem
+ * estimativa): o app mostra sempre "lido no painel" com data/hora. Campos vazios = não anotado.
+ */
+export interface DashboardReading {
+  id: string;
+  timestamp: number;
+  socPercent: number | null;
+  rangeKm: number | null;
+  odometerKm: number | null;
+  tripAKm: number | null;
+  tripBKm: number | null;
+  mode: RidingMode | null;
+  ambientC: number | null;
+  note: string;
+}
+
 export interface ChargingSession {
   id: string;
   batteryId: 'battery-a' | 'battery-b' | 'ambas';

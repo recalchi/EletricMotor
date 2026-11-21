@@ -64,7 +64,7 @@ service cloud.firestore {
           allow read: if isOwner(uid);
           allow delete: if isOwner(uid);
           allow create, update: if isOwner(uid)
-            && collection in ['maintenance', 'inspections', 'chargingSessions', 'batteryReadings', 'symptoms', 'alerts', 'auditLog', 'meta']
+            && collection in ['maintenance', 'inspections', 'chargingSessions', 'batteryReadings', 'dashboardReadings', 'symptoms', 'alerts', 'auditLog', 'meta']
             && noRealOrigin()
             && sizeOk();
         }

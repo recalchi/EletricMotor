@@ -1,21 +1,25 @@
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { HARDWARE, useConnectionStatus, useReading } from '../../app/telemetry';
 import { useRangeEstimate } from '../../app/vehicleData';
 import { useCollection } from '../../data/hooks';
 import type { DisplayValue } from '../../domain/origin';
 import { ORIGIN_LABEL } from '../../domain/origin';
-import type { DataOrigin, MaintenanceRecord } from '../../domain/types';
+import type { ChargingSession, DashboardReading, DataOrigin, MaintenanceRecord } from '../../domain/types';
 import { SimulationBanner, cx, fmtValue } from '../../shared/ui';
 import { Icon, type IconName } from '../../shared/ui/icons';
 import { VehicleScene } from '../vehicle-3d/VehicleScene';
 import { runAutoScan, useScan } from '../scanner/autoScan';
+import { DashboardReadingSheet, MODE_STYLE } from './DashboardReadingSheet';
 
 /**
- * Tela inicial no estilo "app de carro": nome do veículo e estado no topo, um número grande, a moto em
- * destaque, botões redondos e cartões em duas colunas. Regra do projeto mantida: todo valor mostra a
- * origem (ponto colorido + rótulo) e "—" quando não há leitura — nada é inventado para preencher a tela.
+ * Tela inicial da moto (estilo app de veículo: nome e estado no topo, um número grande, a moto em
+ * destaque, botões redondos e cartões). Tudo pensado para a Voltz EVS: autonomia, bateria(s) removível(is),
+ * modo de condução, odômetro e trips — os mesmos números do painel TFT.
+ *
+ * Fontes, em ordem: telemetria ao vivo/estimativa (com origem) → última leitura digitada do painel
+ * ("lido no painel", com data) → "--". Nada é inventado para preencher a tela.
  */
 
 const ORIGIN_DOT: Record<DataOrigin, string> = {
@@ -25,22 +29,46 @@ const ORIGIN_DOT: Record<DataOrigin, string> = {
   INDISPONIVEL: 'bg-origin-na',
 };
 
-function Origin({ dv, className }: { dv: DisplayValue; className?: string }) {
+const when = (t: number) =>
+  new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+/** Valor exibido + de onde veio (origem do app ou leitura manual do painel). */
+interface Shown {
+  value: number | null;
+  source: { kind: 'origin'; dv: DisplayValue } | { kind: 'painel'; at: number } | { kind: 'nenhum' };
+}
+
+function pick(dv: DisplayValue, manual: number | null | undefined, at: number | undefined): Shown {
+  if (dv.value != null) return { value: dv.value, source: { kind: 'origin', dv } };
+  if (manual != null && at) return { value: manual, source: { kind: 'painel', at } };
+  return { value: null, source: { kind: 'nenhum' } };
+}
+
+function Source({ s, className }: { s: Shown['source']; className?: string }) {
+  const base = cx('inline-flex items-center gap-1 text-[11px] text-slate-500', className);
+  if (s.kind === 'painel')
+    return (
+      <span className={base}>
+        <Icon name="eye" className="h-3 w-3" /> lido no painel · {when(s.at)}
+      </span>
+    );
+  const dv = s.kind === 'origin' ? s.dv : null;
+  const origin: DataOrigin = dv?.origin ?? 'INDISPONIVEL';
   return (
-    <span className={cx('inline-flex items-center gap-1 text-[11px] text-slate-500', className)}>
-      <span className={cx('h-1.5 w-1.5 rounded-full', ORIGIN_DOT[dv.origin])} />
-      {dv.stale ? 'desatualizado' : ORIGIN_LABEL[dv.origin].toLowerCase()}
+    <span className={base}>
+      <span className={cx('h-1.5 w-1.5 rounded-full', ORIGIN_DOT[origin])} />
+      {dv?.stale ? 'desatualizado' : ORIGIN_LABEL[origin].toLowerCase()}
     </span>
   );
 }
 
-function BatteryBar({ label, dv }: { label: string; dv: DisplayValue }) {
-  const v = dv.value;
+function BatteryBar({ label, s }: { label: string; s: Shown }) {
+  const v = s.value;
   return (
     <div className="flex items-center gap-2">
       <Icon name="battery" className={cx('h-4 w-4', v == null ? 'text-slate-500' : 'text-emerald-400')} />
       <span className="text-xs text-slate-500">{label}</span>
-      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-700">
+      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-ink-700">
         {v != null && (
           <span
             className={cx('block h-full rounded-full', v < 20 ? 'bg-amber-500' : 'bg-emerald-500')}
@@ -48,7 +76,7 @@ function BatteryBar({ label, dv }: { label: string; dv: DisplayValue }) {
           />
         )}
       </span>
-      <span className="w-9 text-xs tabular-nums text-slate-400">{v == null ? '—' : `${fmtValue(v, 0)}%`}</span>
+      <span className="w-9 text-xs tabular-nums text-slate-400">{v == null ? '--' : `${fmtValue(v, 0)}%`}</span>
     </div>
   );
 }
@@ -62,15 +90,25 @@ function RoundAction({
   icon: IconName;
   label: string;
   onClick?: () => void;
-  to: string;
+  to?: string;
 }) {
-  return (
-    <Link to={to} onClick={onClick} className="group flex flex-col items-center gap-1.5" aria-label={label}>
+  const inner = (
+    <>
       <span className="grid h-[62px] w-[62px] place-items-center rounded-full bg-card text-slate-200 shadow-soft transition group-active:scale-95 dark:ring-1 dark:ring-ink-700">
         <Icon name={icon} className="h-6 w-6" />
       </span>
       <span className="text-[11px] text-slate-500">{label}</span>
+    </>
+  );
+  const cls = 'group flex flex-col items-center gap-1.5';
+  return to ? (
+    <Link to={to} onClick={onClick} className={cls} aria-label={label}>
+      {inner}
     </Link>
+  ) : (
+    <button onClick={onClick} className={cls} aria-label={label}>
+      {inner}
+    </button>
   );
 }
 
@@ -118,14 +156,18 @@ function stateLabel(tone: 'ok' | 'sim' | 'off') {
   return tone === 'ok' ? 'Ao vivo' : tone === 'sim' ? 'Simulação' : 'Sem conexão';
 }
 
+const km = (v: number | null | undefined, d = 0) => (v == null ? '--' : `${fmtValue(v, d)} km`);
+
 export default function HomePage() {
   const nav = useNavigate();
+  const [reading, setReading] = useState(false);
   const vehicle = useApp((s) => s.vehicle);
   const alerts = useApp((s) => s.alerts);
   const conn = useConnectionStatus();
   const socA = useReading('battery-a', 'soc', '%');
   const socB = useReading('battery-b', 'soc', '%');
   const motorT = useReading('hub-motor', 'temperature', '°C');
+  const odoLive = useReading('tft-dashboard', 'odometer', 'km');
   const { range } = useRangeEstimate();
   const lastSample = useApp((s) => {
     const all = [...Object.values(s.latest.REAL), ...Object.values(s.latest.SIMULADO)];
@@ -133,26 +175,25 @@ export default function HomePage() {
   });
   const lastScan = useScan((s) => s.finishedAt);
   const { items: maint } = useCollection<MaintenanceRecord>('maintenance');
-  const openAlerts = alerts.filter((a) => !a.endedAt && !a.acknowledgedAt);
+  const { items: charges } = useCollection<ChargingSession>('chargingSessions');
+  const { items: panel } = useCollection<DashboardReading>('dashboardReadings');
+
+  const lastPanel = [...panel].sort((a, b) => b.timestamp - a.timestamp)[0];
   const lastMaint = [...maint].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const lastCharge = [...charges].sort((a, b) => b.end.localeCompare(a.end))[0];
+  const openAlerts = alerts.filter((a) => !a.endedAt && !a.acknowledgedAt);
   const gw = HARDWARE.map((a) => a.status()).find((st) => st.firmware);
+  const twoPacks = vehicle.batteryCount === 2;
 
-  // Número principal: autonomia; sem ela, carga da bateria A; sem nenhuma, "—"
-  const main: { dv: DisplayValue; unit: string } =
-    range.value != null
-      ? { dv: range, unit: 'km' }
-      : socA.value != null
-        ? { dv: socA, unit: '%' }
-        : { dv: range, unit: 'km' };
+  const rangeS = pick(range, lastPanel?.rangeKm, lastPanel?.timestamp);
+  const battA = pick(socA, lastPanel?.socPercent, lastPanel?.timestamp);
+  const battB = pick(socB, null, undefined);
+  const odo = pick(odoLive, lastPanel?.odometerKm, lastPanel?.timestamp);
+  const mode = lastPanel?.mode ?? null;
 
-  const updated = lastSample
-    ? new Date(lastSample).toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '—';
+  // O painel da EVS mostra uma única "capacidade da bateria"; com leitura só do painel, mostra uma barra
+  const panelOnly = battA.source.kind === 'painel' && battB.value == null;
+  const updatedAt = Math.max(lastSample, lastPanel?.timestamp ?? 0);
 
   return (
     <div className="-m-3 min-h-full pb-6 sm:-m-4 lg:m-0">
@@ -162,7 +203,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Topo: veículo + estado */}
+      {/* Topo: moto + estado */}
       <section className="relative px-5 pt-6" style={{ backgroundImage: 'var(--hero-bg)' }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -170,7 +211,7 @@ export default function HomePage() {
             <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-slate-500">
               <span>{stateLabel(conn.tone)}</span>
               <span className="h-3 w-px bg-ink-600" />
-              <span>Atualizado: {updated}</span>
+              <span>Atualizado: {updatedAt ? when(updatedAt) : '—'}</span>
               <button
                 onClick={() => nav('/scanner')}
                 aria-label="Atualizar com o scanner"
@@ -189,38 +230,54 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Número principal */}
-        <div className="mt-8 flex flex-col items-center">
-          <div className="flex items-start text-fg">
+        {/* Autonomia — o número que importa para quem pilota */}
+        <div className="mt-7 flex flex-col items-center">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Autonomia</div>
+          <div className="mt-1 flex items-start text-fg">
             <span className="text-[76px] font-light leading-none tracking-tight tabular-nums">
-              {main.dv.value == null ? '--' : fmtValue(main.dv.value, 0)}
+              {rangeS.value == null ? '--' : fmtValue(rangeS.value, 0)}
             </span>
-            <span className="ml-1 mt-2 text-lg font-light text-slate-400">{main.unit}</span>
+            <span className="ml-1 mt-2 text-lg font-light text-slate-400">km</span>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <BatteryBar label="A" dv={socA} />
-            {vehicle.batteryCount === 2 && <BatteryBar label="B" dv={socB} />}
+            <BatteryBar label={panelOnly || !twoPacks ? 'Bateria' : 'A'} s={battA} />
+            {twoPacks && !panelOnly && <BatteryBar label="B" s={battB} />}
           </div>
-          <div className="mt-1.5 flex items-center gap-2">
-            <Origin dv={main.dv} />
-            {main.dv.value == null && (
-              <Link to="/scanner" className="text-[11px] text-cyanx-300">
-                conectar para ver a bateria
-              </Link>
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
+            <Source s={rangeS.value != null ? rangeS.source : battA.source} />
+            {rangeS.value == null && battA.value == null && (
+              <button onClick={() => setReading(true)} className="text-[11px] text-cyanx-300">
+                ler o painel agora
+              </button>
             )}
+          </div>
+          {/* Modo e odômetro, como no painel */}
+          <div className="mt-3 flex items-center gap-2">
+            {mode && (
+              <span
+                className={cx('rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-widest', MODE_STYLE[mode].cls)}
+              >
+                {MODE_STYLE[mode].label}
+              </span>
+            )}
+            <span className="rounded-full bg-card/70 px-2.5 py-0.5 text-[11px] text-slate-400 shadow-soft">
+              Total {km(odo.value)}
+            </span>
           </div>
         </div>
 
         {/* A moto em destaque */}
-        <Link to="/explorador" aria-label="Abrir o Explorador 3D" className="relative mx-auto block h-[230px] max-w-xl">
+        <Link to="/explorador" aria-label="Abrir o Explorador 3D" className="relative mx-auto block h-[220px] max-w-xl">
           <VehicleScene variant="showcase" preset="lateral" className="h-full w-full" />
           <span className="absolute bottom-1 right-1 rounded-full bg-card/80 px-2 py-0.5 text-[10px] text-slate-500">
             modelo provisório
           </span>
         </Link>
 
-        {/* Botões redondos */}
+        {/* Ações da moto */}
         <div className="mx-auto mt-2 grid max-w-md grid-cols-4 gap-2 pb-2">
+          <RoundAction icon="eye" label="Ler painel" onClick={() => setReading(true)} />
+          <RoundAction icon="battery" label="Recarga" to="/baterias" />
           <RoundAction
             icon="radar"
             label="Escanear"
@@ -230,14 +287,12 @@ export default function HomePage() {
             }}
           />
           <RoundAction icon="plug" label="Gateway" to="/conectividade" />
-          <RoundAction icon="thermo" label="Sensores" to="/sensores" />
-          <RoundAction icon="report" label="Relatório" to="/relatorios/tecnico" />
         </div>
       </section>
 
-      {/* Cartões */}
+      {/* Cartões da moto */}
       <section className="mx-auto mt-4 grid max-w-3xl grid-cols-2 gap-3 px-4">
-        <Tile icon="thermo" title="Motor" to="/sensores" className="row-span-2">
+        <Tile icon="motor" title="Motor no cubo" to="/sensores" className="row-span-2">
           <div className="mt-auto pt-4">
             <div className="flex items-start text-fg">
               <span className="text-[44px] font-light leading-none tabular-nums">
@@ -245,19 +300,19 @@ export default function HomePage() {
               </span>
               <span className="ml-0.5 mt-1 text-lg font-light text-slate-400">°C</span>
             </div>
-            <div className="mt-1 text-[13px] text-slate-500">Temperatura do motor hub</div>
-            <Origin dv={motorT} className="mt-1" />
+            <div className="mt-1 text-[13px] text-slate-500">Temperatura do motor (roda traseira)</div>
+            <Source s={{ kind: 'origin', dv: motorT }} className="mt-1" />
           </div>
         </Tile>
 
         <Tile
           icon="battery"
-          title="Baterias"
+          title={twoPacks ? 'Baterias A e B' : 'Bateria'}
           to="/baterias"
           status={
             socA.value == null && socB.value == null
-              ? 'Sem leitura'
-              : `A ${fmtValue(socA.value, 0)}%${vehicle.batteryCount === 2 ? ` · B ${fmtValue(socB.value, 0)}%` : ''}`
+              ? 'Removíveis · sem leitura ao vivo'
+              : `A ${fmtValue(socA.value, 0)}%${twoPacks ? ` · B ${fmtValue(socB.value, 0)}%` : ''}`
           }
         />
         <Tile
@@ -266,6 +321,39 @@ export default function HomePage() {
           to="/diagnostico"
           status={openAlerts.length ? `${openAlerts.length} ativo(s)` : 'Normal'}
           tone={openAlerts.length ? 'warn' : undefined}
+        />
+
+        <Tile
+          icon="chart"
+          title="Viagem"
+          to="/telemetria"
+          status={
+            lastPanel?.tripAKm != null || lastPanel?.tripBKm != null
+              ? `Trip A ${km(lastPanel?.tripAKm, 1)} · B ${km(lastPanel?.tripBKm, 1)}`
+              : 'Trips A/B: leia no painel'
+          }
+        />
+        <Tile
+          icon="pulse"
+          title="Recarga"
+          to="/baterias"
+          status={
+            lastCharge
+              ? `Última: ${new Date(lastCharge.end).toLocaleDateString('pt-BR')}${lastCharge.socEnd != null ? ` · ${lastCharge.socEnd}%` : ''}`
+              : 'Nenhuma registrada'
+          }
+        />
+
+        <Tile icon="tire" title="Pneus" to="/manutencao" status="Calibragem: registrar" />
+        <Tile
+          icon="wrench"
+          title="Revisão"
+          to="/manutencao"
+          status={
+            lastMaint
+              ? `Última: ${new Date(lastMaint.date).toLocaleDateString('pt-BR')} · ${fmtValue(lastMaint.odometerKm, 0)} km`
+              : 'Sem registros'
+          }
         />
 
         <Tile
@@ -279,24 +367,20 @@ export default function HomePage() {
           icon="radar"
           title="Scanner"
           to="/scanner"
-          status={
-            lastScan
-              ? `Último: ${new Date(lastScan).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-              : 'Nunca executado'
-          }
+          status={lastScan ? `Último: ${when(lastScan)}` : 'Nunca executado'}
         />
 
-        <Tile
-          icon="wrench"
-          title="Manutenção"
-          to="/manutencao"
-          status={lastMaint ? `Última: ${new Date(lastMaint.date).toLocaleDateString('pt-BR')}` : 'Sem registros'}
-        />
-        <Tile icon="tire" title="Pneus" to="/sensores" status="Sem sensor instalado" />
-
-        <Tile icon="cube" title="Explorador 3D" to="/explorador" status="Peças e sistemas" />
-        <Tile icon="chart" title="Central técnica" to="/tecnico" status="Painel completo" />
+        <Link to="/tecnico" className="sheet col-span-2 flex items-center gap-3 p-4 active:scale-[0.99]">
+          <Icon name="home" className="h-6 w-6 text-slate-300" />
+          <div className="flex-1">
+            <div className="text-[15px] font-medium text-fg">Central técnica</div>
+            <div className="text-[13px] text-slate-500">3D, árvore de peças, telemetria e cobertura</div>
+          </div>
+          <Icon name="chevron" className="h-4 w-4 text-slate-500" />
+        </Link>
       </section>
+
+      {reading && <DashboardReadingSheet onClose={() => setReading(false)} last={lastPanel} />}
     </div>
   );
 }

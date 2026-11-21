@@ -8,6 +8,7 @@ const COLLECTION_LABEL: Record<CollectionName, string> = {
   inspections: 'Inspeção',
   chargingSessions: 'Sessão de carga',
   batteryReadings: 'Leitura de bateria',
+  dashboardReadings: 'Leitura do painel',
   symptoms: 'Sintoma',
   alerts: 'Alerta',
   auditLog: 'Auditoria',
