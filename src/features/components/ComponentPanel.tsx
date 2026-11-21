@@ -80,7 +80,7 @@ export function ComponentPanel({ compact }: { compact?: boolean }) {
     <div className="space-y-4 text-sm" data-testid="component-panel">
       <div>
         <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{GROUP_LABELS[c.group]}</div>
-        <h3 className="text-lg font-semibold text-white">{c.name}</h3>
+        <h3 className="text-lg font-semibold text-fg">{c.name}</h3>
         <p className="text-slate-400">{c.description}</p>
         <p className="mt-1 text-xs text-slate-500">
           <span className="text-slate-400">Função:</span> {c.function}
@@ -172,7 +172,7 @@ export function ComponentPanel({ compact }: { compact?: boolean }) {
             {sensors.map((s) => (
               <li key={s.id} className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-proposal" />
-                <Link to="/sensores" className="text-slate-300 hover:text-white">
+                <Link to="/sensores" className="text-slate-300 hover:text-fg">
                   {s.name}
                 </Link>
                 <span className="text-slate-500">({s.status === 'proposto' ? 'proposto' : 'em avaliação'})</span>

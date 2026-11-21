@@ -63,12 +63,16 @@ export function VehicleScene({
   presetNonce = 0,
   autoRotate = false,
   className,
+  variant = 'workspace',
 }: {
   preset?: CameraPreset;
   presetNonce?: number;
   autoRotate?: boolean;
   className?: string;
+  /** "showcase": vitrine da tela inicial — fundo transparente, sem grade, giro lento, sem interação */
+  variant?: 'workspace' | 'showcase';
 }) {
+  const showcase = variant === 'showcase';
   const [gl] = useState(hasWebGL);
   const select = useApp((s) => s.select);
   const reduced = useApp((s) => s.reducedMotion);
@@ -81,13 +85,16 @@ export function VehicleScene({
           shadows
           dpr={[1, 2]}
           camera={{ position: PRESETS.iso, fov: 38, near: 0.05, far: 50 }}
-          onPointerMissed={() => select(null)}
-          gl={{ antialias: true, preserveDrawingBuffer: true }}
+          onPointerMissed={() => !showcase && select(null)}
+          gl={{ antialias: true, preserveDrawingBuffer: true, alpha: showcase }}
+          style={showcase ? { pointerEvents: 'none', background: 'transparent' } : undefined}
           data-testid="vehicle-canvas"
         >
-          <color attach="background" args={['#050c18']} />
-          <fog attach="fog" args={['#050c18', 6, 14]} />
-          <ambientLight intensity={0.35} />
+          {!showcase && <color attach="background" args={['#050c18']} />}
+          {!showcase && <fog attach="fog" args={['#050c18', 6, 14]} />}
+          {/* Vitrine em fundo claro: mais luz ambiente e um preenchimento frontal para a moto não virar silhueta */}
+          <ambientLight intensity={showcase ? 0.9 : 0.35} />
+          {showcase && <directionalLight position={[2, 2, 4]} intensity={1.1} />}
           <directionalLight position={[3, 5, 2]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
           <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#67e8f9" />
           <Suspense fallback={null}>
@@ -104,19 +111,21 @@ export function VehicleScene({
             </Environment>
           </Suspense>
           <MotorcycleModel />
-          <ContactShadows position={[0, 0.001, 0]} opacity={0.6} scale={4} blur={2.4} far={1.2} />
-          <Grid
-            position={[0, 0, 0]}
-            args={[12, 12]}
-            cellSize={0.25}
-            cellThickness={0.6}
-            cellColor="#0f2a44"
-            sectionSize={1}
-            sectionThickness={1}
-            sectionColor="#155e75"
-            fadeDistance={9}
-            infiniteGrid
-          />
+          <ContactShadows position={[0, 0.001, 0]} opacity={showcase ? 0.35 : 0.6} scale={4} blur={2.4} far={1.2} />
+          {!showcase && (
+            <Grid
+              position={[0, 0, 0]}
+              args={[12, 12]}
+              cellSize={0.25}
+              cellThickness={0.6}
+              cellColor="#0f2a44"
+              sectionSize={1}
+              sectionThickness={1}
+              sectionColor="#155e75"
+              fadeDistance={9}
+              infiniteGrid
+            />
+          )}
           <OrbitControls
             makeDefault
             target={TARGET}
@@ -124,15 +133,19 @@ export function VehicleScene({
             minDistance={1}
             maxDistance={9}
             maxPolarAngle={Math.PI / 2 - 0.02}
-            autoRotate={autoRotate && !reduced}
-            autoRotateSpeed={0.6}
+            autoRotate={(autoRotate || showcase) && !reduced}
+            autoRotateSpeed={showcase ? 0.45 : 0.6}
+            enableZoom={!showcase}
+            enablePan={!showcase}
           />
           <CameraRig preset={preset} nonce={presetNonce} />
         </Canvas>
       </GLBoundary>
-      <div className="pointer-events-none absolute left-3 top-3 rounded border border-amber-400/40 bg-ink-950/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-amber-300">
-        MODELO PROVISÓRIO<span className="hidden sm:inline"> — aproximação geométrica, não é CAD</span>
-      </div>
+      {!showcase && (
+        <div className="pointer-events-none absolute left-3 top-3 rounded border border-amber-400/40 bg-ink-950/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-amber-300">
+          MODELO PROVISÓRIO<span className="hidden sm:inline"> — aproximação geométrica, não é CAD</span>
+        </div>
+      )}
     </div>
   );
 }

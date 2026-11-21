@@ -9,6 +9,8 @@ import { useCollection, useDoc } from '../data/hooks';
 import type { DeviceProfile, VehicleProfile } from '../domain/types';
 
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
+const HomePage = lazy(() => import('../features/home/HomePage'));
+const AccountPage = lazy(() => import('../features/home/AccountPage'));
 const ExplorerPage = lazy(() => import('../features/vehicle-3d/ExplorerPage'));
 const DiagnosticsPage = lazy(() => import('../features/diagnostics/DiagnosticsPage'));
 const BatteriesPage = lazy(() => import('../features/batteries/BatteriesPage'));
@@ -60,7 +62,9 @@ function Gate() {
       <Suspense fallback={<div className="p-6 text-slate-400">Carregando…</div>}>
         <Routes>
           <Route element={<Layout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<HomePage />} />
+            <Route path="tecnico" element={<DashboardPage />} />
+            <Route path="conta" element={<AccountPage />} />
             <Route path="explorador" element={<ExplorerPage />} />
             <Route path="diagnostico" element={<DiagnosticsPage />} />
             <Route path="baterias" element={<BatteriesPage />} />
@@ -77,7 +81,7 @@ function Gate() {
             <Route path="manual" element={<ManualPage />} />
             <Route path="captura" element={<CapturePage />} />
             <Route path="scanner" element={<ScannerPage />} />
-            <Route path="*" element={<DashboardPage />} />
+            <Route path="*" element={<HomePage />} />
           </Route>
         </Routes>
       </Suspense>

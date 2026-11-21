@@ -105,7 +105,7 @@ function ValidationDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
     >
       <div className="panel w-full max-w-lg p-5">
-        <h3 className="mb-1 text-lg font-semibold text-white">Validar “{device.name}”</h3>
+        <h3 className="mb-1 text-lg font-semibold text-fg">Validar “{device.name}”</h3>
         <p className="mb-3 text-xs text-slate-400">
           Após validado, as leituras deste dispositivo passam a ser exibidas como{' '}
           <b className="text-emerald-300">REAL</b>. Confirme cada item:
@@ -293,7 +293,7 @@ export function DevicesPanel() {
       {draft && (
         <div className="mt-4 rounded-md border border-cyanx-400/40 p-3">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-semibold text-white">{isNew ? 'Novo dispositivo' : `Editar ${draft.name}`}</h4>
+            <h4 className="text-sm font-semibold text-fg">{isNew ? 'Novo dispositivo' : `Editar ${draft.name}`}</h4>
             {isNew && (
               <select
                 className="input ml-auto w-auto text-xs"

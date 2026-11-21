@@ -128,7 +128,7 @@ export function Button({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'primary' | 'ghost' | 'danger' }) {
   const v = {
     default: 'bg-ink-700 hover:bg-ink-600 text-slate-100 ring-1 ring-ink-600',
-    primary: 'bg-cyanx-500 hover:bg-cyanx-400 text-ink-950 font-semibold',
+    primary: 'bg-cyanx-500 hover:bg-cyanx-400 text-onaccent font-semibold',
     ghost: 'hover:bg-ink-700 text-slate-300',
     danger: 'bg-red-600/80 hover:bg-red-500 text-white',
   }[variant];
@@ -172,7 +172,7 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="hidden text-xl font-semibold tracking-wide text-white lg:block">{title}</h1>
+        <h1 className="hidden text-xl font-semibold tracking-wide text-fg lg:block">{title}</h1>
         {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
       </div>
       {right}
@@ -182,7 +182,7 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
 
 export function SimulationBanner() {
   return (
-    <div className="sim-stripes mb-3 rounded-md px-3 py-1.5 text-center text-xs font-bold tracking-[0.3em] text-ink-950">
+    <div className="sim-stripes mb-3 rounded-md px-3 py-1.5 text-center text-xs font-bold tracking-[0.3em] text-onaccent">
       MODO SIMULAÇÃO — DADOS FICTÍCIOS DE DEMONSTRAÇÃO
     </div>
   );

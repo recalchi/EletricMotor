@@ -9,7 +9,8 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { useDiag } from './diagnostics';
 
 export const NAV: { to: string; label: string; icon: IconName }[] = [
-  { to: '/', label: 'Central de Controle', icon: 'home' },
+  { to: '/', label: 'Minha Voltz', icon: 'moto' },
+  { to: '/tecnico', label: 'Central técnica', icon: 'home' },
   { to: '/scanner', label: 'Scanner automático', icon: 'radar' },
   { to: '/explorador', label: 'Explorador 3D', icon: 'cube' },
   { to: '/diagnostico', label: 'Diagnóstico', icon: 'alert' },
@@ -25,15 +26,16 @@ export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/captura', label: 'Captura e diagnóstico', icon: 'history' },
   { to: '/configuracoes', label: 'Configurações', icon: 'gear' },
   { to: '/manual', label: 'Manual Técnico', icon: 'book' },
+  { to: '/conta', label: 'Minha conta', icon: 'user' },
 ];
 
 /** Atalhos da barra inferior no celular (o restante fica em "Mais"). */
 const TABS: { to: string; label: string; icon: IconName }[] = [
-  { to: '/', label: 'Central', icon: 'home' },
+  { to: '/', label: 'Minha Voltz', icon: 'moto' },
   { to: '/scanner', label: 'Scanner', icon: 'radar' },
-  { to: '/explorador', label: '3D', icon: 'cube' },
-  { to: '/diagnostico', label: 'Alertas', icon: 'alert' },
 ];
+/** Telas com título próprio (estilo app de carro): sem o cabeçalho do celular. */
+const OWN_HEADER = ['/', '/conta'];
 
 function pageTitle(pathname: string) {
   const hit = [...NAV]
@@ -49,7 +51,7 @@ function Logo() {
         <path d="M3 6l13 22L29 6h-6l-7 12L9 6z" fill="none" stroke="#22d3ee" strokeWidth="2" />
       </svg>
       <div className="leading-tight">
-        <div className="text-sm font-bold tracking-[0.2em] text-white">ELETRICMOTOR</div>
+        <div className="text-sm font-bold tracking-[0.2em] text-fg">ELETRICMOTOR</div>
         <div className="text-[10px] tracking-[0.3em] text-cyanx-400">VOLTZ EVS</div>
       </div>
     </div>
@@ -62,7 +64,7 @@ function Count({ n, tone }: { n: number; tone: 'red' | 'amber' }) {
     <span
       className={cx(
         'rounded-full px-1.5 text-[10px] font-bold leading-4',
-        tone === 'red' ? 'bg-red-500 text-white' : 'bg-amber-500 text-ink-950',
+        tone === 'red' ? 'bg-red-500 text-white' : 'bg-amber-500 text-onaccent',
       )}
     >
       {n}
@@ -88,7 +90,9 @@ export function Layout() {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
-  const inTabs = TABS.some((t) => (t.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(t.to)));
+  const inTabs =
+    loc.pathname === '/conta' ||
+    TABS.some((t) => (t.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(t.to)));
 
   const connDot = (
     <span
@@ -112,7 +116,7 @@ export function Layout() {
         <div className="mb-4 flex items-center justify-between px-1 pt-1">
           <Logo />
           <button
-            className="-mr-1 rounded-md p-2 text-slate-400 hover:text-white lg:hidden"
+            className="-mr-1 rounded-md p-2 text-slate-400 hover:text-fg lg:hidden"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
           >
@@ -163,7 +167,7 @@ export function Layout() {
           <div className="mb-2 truncate">
             {session?.mode === 'demo' ? 'Modo demonstração (local)' : (session?.email ?? 'Firebase')}
           </div>
-          <button onClick={logout} className="flex items-center gap-1.5 py-1 text-slate-400 hover:text-white">
+          <button onClick={logout} className="flex items-center gap-1.5 py-1 text-slate-400 hover:text-fg">
             <Icon name="logout" /> Sair
           </button>
         </div>
@@ -174,7 +178,12 @@ export function Layout() {
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
         {/* Cabeçalho do celular: título da tela + estado essencial */}
-        <header className="pt-safe sticky top-0 z-30 border-b border-ink-700 bg-ink-950/90 backdrop-blur print:hidden lg:hidden">
+        <header
+          className={cx(
+            'pt-safe sticky top-0 z-30 border-b border-ink-700 bg-ink-950/90 backdrop-blur print:hidden lg:hidden',
+            OWN_HEADER.includes(loc.pathname) && 'hidden',
+          )}
+        >
           <div className="flex h-12 items-center gap-2 px-2">
             <button
               className="rounded-md p-2 text-slate-300 active:bg-ink-800"
@@ -183,7 +192,7 @@ export function Layout() {
             >
               <Icon name="menu" className="h-5 w-5" />
             </button>
-            <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">{pageTitle(loc.pathname)}</h1>
+            <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">{pageTitle(loc.pathname)}</h1>
             {capturing && (
               <NavLink
                 to="/captura"
@@ -270,7 +279,7 @@ export function Layout() {
         className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 backdrop-blur print:hidden lg:hidden"
         aria-label="Atalhos"
       >
-        <div className="grid h-16 grid-cols-5">
+        <div className="grid h-16 grid-cols-4">
           {TABS.map((t) => (
             <NavLink
               key={t.to}
@@ -314,6 +323,23 @@ export function Layout() {
             </span>
             Mais
           </button>
+          <NavLink
+            to="/conta"
+            className={({ isActive }) =>
+              cx(
+                'relative flex flex-col items-center justify-center gap-1 text-[11px] transition active:bg-ink-800',
+                isActive ? 'text-cyanx-300' : 'text-slate-400',
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && <span className="absolute inset-x-5 top-0 h-0.5 rounded-b bg-cyanx-400 shadow-glow" />}
+                <Icon name="user" className="h-[22px] w-[22px]" />
+                Conta
+              </>
+            )}
+          </NavLink>
         </div>
       </nav>
     </div>

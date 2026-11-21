@@ -131,7 +131,7 @@ export function ScanHero({ compact }: { compact?: boolean }) {
           if (!running) void runAutoScan();
         }}
         className={cx(
-          'relative grid shrink-0 place-items-center rounded-full bg-cyanx-500 text-ink-950 shadow-glow transition active:scale-95',
+          'relative grid shrink-0 place-items-center rounded-full bg-cyanx-500 text-onaccent shadow-glow transition active:scale-95',
           compact ? 'h-16 w-16' : 'h-32 w-32',
         )}
         aria-label="Escanear a moto automaticamente"
@@ -141,7 +141,7 @@ export function ScanHero({ compact }: { compact?: boolean }) {
         <Icon name="radar" className={compact ? 'h-8 w-8' : 'h-14 w-14'} />
       </Link>
       <div className="relative min-w-0">
-        <div className={cx('font-semibold text-white', compact ? 'text-base' : 'text-lg')}>
+        <div className={cx('font-semibold text-fg', compact ? 'text-base' : 'text-lg')}>
           {running ? 'Escaneando…' : 'Escanear a moto'}
         </div>
         <p className="text-xs text-slate-400">
@@ -172,16 +172,16 @@ function Progress() {
               className={cx(
                 'mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold',
                 i < idx
-                  ? 'bg-emerald-500 text-ink-950'
+                  ? 'bg-emerald-500 text-onaccent'
                   : i === idx
-                    ? 'animate-pulse bg-cyanx-500 text-ink-950'
+                    ? 'animate-pulse bg-cyanx-500 text-onaccent'
                     : 'bg-ink-700 text-slate-400',
               )}
             >
               {i < idx ? <Icon name="check" className="h-3 w-3" /> : i + 1}
             </span>
             <div className="min-w-0">
-              <div className={i === idx ? 'text-white' : i < idx ? 'text-slate-300' : 'text-slate-500'}>{st.label}</div>
+              <div className={i === idx ? 'text-fg' : i < idx ? 'text-slate-300' : 'text-slate-500'}>{st.label}</div>
               {i === idx && s.stepDetail && <div className="text-xs text-slate-400">{s.stepDetail}</div>}
               {st.id === 'ble' && i <= idx && (
                 <div className="text-xs text-cyanx-300">{s.adverts.length} dispositivo(s) Bluetooth LE encontrados</div>

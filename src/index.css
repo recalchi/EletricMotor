@@ -2,8 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ---------- Tema (cores em RGB para aceitar opacidade: bg-ink-900/80) ----------
+   Escuro = paleta original do app. Claro = estilo "app de carro": fundo cinza-azulado, cartões brancos. */
+:root,
+[data-theme='dark'] {
   color-scheme: dark;
+  --ink-950: 3 10 20;
+  --ink-900: 6 16 31;
+  --ink-850: 10 23 41;
+  --ink-800: 13 29 51;
+  --ink-700: 19 42 71;
+  --ink-600: 28 58 94;
+  --slate-50: 248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 148 163 184;
+  --slate-500: 100 116 139;
+  --slate-600: 71 85 105;
+  --cyanx-200: 165 243 252;
+  --cyanx-300: 103 232 249;
+  --cyanx-400: 34 211 238;
+  --cyanx-500: 6 182 212;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --red-100: 254 226 226;
+  --red-200: 254 202 202;
+  --red-300: 252 165 165;
+  --emerald-100: 209 250 229;
+  --emerald-200: 167 243 208;
+  --emerald-300: 110 231 183;
+  --emerald-400: 52 211 153;
+  --sky-300: 125 211 252;
+  --orange-200: 254 215 170;
+  --orange-300: 253 186 116;
+  --fg: 255 255 255;
+  --card: 6 16 31;
+  --page-bg: radial-gradient(1200px 600px at 60% -10%, rgba(34, 211, 238, 0.07), transparent 60%),
+    linear-gradient(#030a14, #030a14);
+  --hero-bg: radial-gradient(120% 80% at 50% 0%, rgba(34, 211, 238, 0.1), transparent 70%);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --ink-950: 238 242 247;
+  --ink-900: 255 255 255;
+  --ink-850: 244 247 251;
+  --ink-800: 233 238 245;
+  --ink-700: 221 228 238;
+  --ink-600: 203 213 225;
+  --slate-50: 11 18 32;
+  --slate-100: 15 23 42;
+  --slate-200: 30 41 59;
+  --slate-300: 51 65 85;
+  --slate-400: 84 99 120;
+  --slate-500: 107 122 144;
+  --slate-600: 148 163 184;
+  --cyanx-200: 21 94 117;
+  --cyanx-300: 14 116 144;
+  --cyanx-400: 8 145 178;
+  --cyanx-500: 6 182 212;
+  --amber-200: 146 64 14;
+  --amber-300: 180 83 9;
+  --red-100: 127 29 29;
+  --red-200: 153 27 27;
+  --red-300: 185 28 28;
+  --emerald-100: 6 78 59;
+  --emerald-200: 6 95 70;
+  --emerald-300: 4 120 87;
+  --emerald-400: 5 150 105;
+  --sky-300: 3 105 161;
+  --orange-200: 154 52 18;
+  --orange-300: 194 65 12;
+  --fg: 11 18 32;
+  --card: 255 255 255;
+  --page-bg: linear-gradient(180deg, #e6ecf4 0%, #eef2f7 38%, #f3f5f9 100%);
+  --hero-bg: radial-gradient(120% 90% at 50% 10%, #dfe8f3 0%, rgba(223, 232, 243, 0) 70%);
 }
 
 html,
@@ -15,8 +89,8 @@ body,
 body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
-  background: radial-gradient(1200px 600px at 60% -10%, rgba(34, 211, 238, 0.07), transparent 60%),
-    linear-gradient(#030a14, #030a14);
+  background: var(--page-bg);
+  background-attachment: fixed;
   font-feature-settings: 'tnum';
 }
 
@@ -25,6 +99,20 @@ body {
     /* min-width: 0 — dentro de grids o painel não cresce além da tela por causa de tabelas/logs largos */
     @apply min-w-0 rounded-lg border border-ink-700/80 bg-ink-900/80 backdrop-blur-sm;
     box-shadow: inset 0 1px 0 rgba(103, 232, 249, 0.05);
+  }
+  [data-theme='light'] .panel {
+    border-color: rgb(var(--ink-700) / 0.7);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 8px 24px rgb(15 23 42 / 0.05);
+  }
+  /* Cartão "folha" do estilo app de carro: branco, cantos bem arredondados, sombra macia */
+  .sheet {
+    @apply min-w-0 rounded-2xl bg-card shadow-soft;
+  }
+  [data-theme='dark'] .sheet,
+  :root:not([data-theme]) .sheet {
+    @apply border border-ink-700/80;
   }
   .input {
     @apply w-full rounded-md border border-ink-600 bg-ink-850 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyanx-400 focus:outline-none;
@@ -95,7 +183,7 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c3a5e;
+  background: rgb(var(--ink-600));
   border-radius: 4px;
 }
 

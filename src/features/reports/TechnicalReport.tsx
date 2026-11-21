@@ -134,6 +134,7 @@ export default function TechnicalReport() {
       {/* Folha */}
       <article
         data-testid="technical-report"
+        data-theme="dark" // folha de papel: usa sempre a paleta original de cinzas, em qualquer tema
         className="mx-auto max-w-[210mm] bg-white p-8 text-slate-900 shadow-xl print:max-w-none print:p-0 print:shadow-none"
       >
         <header className="mb-6 flex items-start justify-between border-b-2 border-slate-800 pb-3">

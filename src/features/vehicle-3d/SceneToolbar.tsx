@@ -21,7 +21,7 @@ const chip = (on: boolean) =>
     'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition ring-1 sm:rounded sm:px-2 sm:py-1 sm:text-[11px]',
     on
       ? 'bg-cyanx-500/20 text-cyanx-300 ring-cyanx-400/60'
-      : 'bg-ink-900/80 text-slate-300 ring-ink-600 hover:text-white',
+      : 'bg-ink-900/80 text-slate-300 ring-ink-600 hover:text-fg',
   );
 
 export function SceneToolbar({ onPreset }: { onPreset: (p: CameraPreset) => void }) {

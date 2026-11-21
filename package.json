@@ -30,6 +30,7 @@
     "@capacitor/core": "^7.6.9",
     "@capacitor/filesystem": "^7.1.9",
     "@capacitor/share": "^7.0.4",
+    "@capacitor/status-bar": "^7.0.6",
     "@react-three/drei": "9.114.0",
     "@react-three/fiber": "8.17.10",
     "esptool-js": "0.6.1",

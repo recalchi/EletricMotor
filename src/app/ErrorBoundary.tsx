@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
         </pre>
         <div className="flex flex-wrap gap-2">
           <button
-            className="rounded-md bg-cyanx-500 px-3 py-1.5 font-semibold text-ink-950"
+            className="rounded-md bg-cyanx-500 px-3 py-1.5 font-semibold text-onaccent"
             onClick={() => this.setState({ error: null })}
           >
             Tentar novamente

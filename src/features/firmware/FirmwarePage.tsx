@@ -64,7 +64,7 @@ function ProgressOverlay({ run, onClose }: { run: FlashRun; onClose: () => void 
   return (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3">
       <div className="panel max-h-[95vh] w-full max-w-xl overflow-auto p-5" data-testid="flash-overlay">
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="text-lg font-semibold text-fg">
           {run.result === 'sucesso' ? 'Firmware atualizado' : run.result === 'falha' ? 'Atualização não concluída' : 'Atualizando firmware…'}
         </h3>
         <p className="text-xs text-slate-400">
@@ -74,7 +74,7 @@ function ProgressOverlay({ run, onClose }: { run: FlashRun; onClose: () => void 
 
         <div className="mt-4 flex items-end justify-between text-sm">
           <span className="text-slate-200">{current ? current.label : run.result === 'sucesso' ? 'Concluído' : 'Encerrado'}</span>
-          <span className="font-mono text-2xl text-white">{pct}%</span>
+          <span className="font-mono text-2xl text-fg">{pct}%</span>
         </div>
         <div className="mt-1">
           <Bar value={pct} tone={run.result === 'falha' ? 'red' : run.result === 'sucesso' ? 'green' : 'cyan'} />
@@ -208,7 +208,7 @@ export default function FirmwarePage() {
             detected.map(({ a, st }) => (
               <div key={a.id} className="text-sm" data-testid="fw-detected">
                 <div className="text-slate-200">
-                  {st.firmware!.name} <b className="text-white">v{st.firmware!.version}</b>
+                  {st.firmware!.name} <b className="text-fg">v{st.firmware!.version}</b>
                   {st.firmware!.dev ? ` · ${st.firmware!.dev}` : ''}
                   <span className="text-xs text-slate-500"> via {a.name}</span>
                 </div>
@@ -244,7 +244,7 @@ export default function FirmwarePage() {
               <li key={`${r.name}@${r.version}`} className="rounded border border-ink-700 p-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-slate-200">
-                    {r.name} <b className="text-white">v{r.version}</b>
+                    {r.name} <b className="text-fg">v{r.version}</b>
                   </span>
                   <span className="text-[11px] text-slate-500">{r.date}</span>
                 </div>

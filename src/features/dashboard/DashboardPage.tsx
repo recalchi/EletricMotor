@@ -38,7 +38,7 @@ function Kpi({
         <div className="text-[10px] uppercase leading-tight tracking-[0.08em] text-slate-400 sm:truncate sm:tracking-[0.14em]">
           {label}
         </div>
-        <div className={cx('font-mono text-xl tabular-nums', dv.value == null ? 'text-slate-500' : 'text-white')}>
+        <div className={cx('font-mono text-xl tabular-nums', dv.value == null ? 'text-slate-500' : 'text-fg')}>
           {fmtValue(dv.value, digits)}
           {dv.value != null && <span className="ml-1 text-xs text-slate-400">{dv.unit}</span>}
         </div>

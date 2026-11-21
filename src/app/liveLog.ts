@@ -36,7 +36,12 @@ async function flush() {
   const body = queue.join('\n');
   queue = [];
   try {
-    const r = await fetch(ENDPOINT, { method: 'POST', body, headers: { 'content-type': 'text/plain' }, keepalive: true });
+    const r = await fetch(ENDPOINT, {
+      method: 'POST',
+      body,
+      headers: { 'content-type': 'text/plain' },
+      keepalive: true,
+    });
     if (r.status === 404 || r.status === 403) disabled = true; // servidor sem o canal (ex.: hospedagem): para de tentar
   } catch {
     /* servidor local parado: descarta */

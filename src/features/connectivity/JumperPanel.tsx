@@ -93,7 +93,7 @@ export function JumperPanel({ bench, live }: { bench: BenchState; live: boolean 
                 {t.ok ? '✓ ok' : 'pendente'}
               </span>
             </div>
-            <div className="font-mono text-2xl text-white">{t.value}</div>
+            <div className="font-mono text-2xl text-fg">{t.value}</div>
             <div className="my-1 h-1.5 rounded bg-ink-700">
               <div className="h-1.5 rounded bg-cyanx-400" style={{ width: `${Math.round(t.bar * 100)}%` }} />
             </div>

@@ -53,7 +53,7 @@ export default function LoginPage() {
           <svg viewBox="0 0 32 32" className="mx-auto mb-3 h-14 w-14 drop-shadow-[0_0_12px_rgba(34,211,238,0.45)]">
             <path d="M3 6l13 22L29 6h-6l-7 12L9 6z" fill="none" stroke="#22d3ee" strokeWidth="2" />
           </svg>
-          <h1 className="text-xl font-bold tracking-[0.25em] text-white">ELETRICMOTOR</h1>
+          <h1 className="text-xl font-bold tracking-[0.25em] text-fg">ELETRICMOTOR</h1>
           <p className="mt-1 text-xs tracking-[0.2em] text-cyanx-400">GÊMEO DIGITAL · VOLTZ EVS</p>
         </div>
 
@@ -63,7 +63,7 @@ export default function LoginPage() {
               type="button"
               disabled={busy}
               onClick={() => run(s.signInGoogle)}
-              className="em-btn flex w-full items-center justify-center gap-3 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow transition hover:bg-slate-100 active:bg-slate-200 disabled:opacity-50"
+              className="em-btn flex w-full items-center justify-center gap-3 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow transition hover:bg-[#f1f5f9] active:bg-[#e2e8f0] disabled:opacity-50"
             >
               <GoogleMark />
               Continuar com Google
@@ -107,7 +107,7 @@ export default function LoginPage() {
               </Button>
               <button
                 type="button"
-                className="w-full py-2 text-xs text-slate-400 hover:text-white"
+                className="w-full py-2 text-xs text-slate-400 hover:text-fg"
                 onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
               >
                 {mode === 'login' ? 'Não tem conta? Criar conta' : 'Já tem conta? Entrar'}

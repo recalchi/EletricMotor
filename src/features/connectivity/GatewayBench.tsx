@@ -100,7 +100,7 @@ export function GatewayBench() {
       {next ? (
         <div className="mb-3 rounded border border-cyanx-400/50 bg-cyanx-500/10 p-3 text-sm" data-testid="bench-next">
           <div className="text-[11px] uppercase tracking-wider text-cyanx-300">Próximo passo</div>
-          <div className="font-medium text-white">{next.label}</div>
+          <div className="font-medium text-fg">{next.label}</div>
           <div className="text-slate-300">{next.howTo}</div>
         </div>
       ) : (
