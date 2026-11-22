@@ -46,7 +46,7 @@ Camadas, da mais simples à mais trabalhosa (cada uma só avança se a anterior 
 |---|---|---|---|---|
 | 1 | **Quem é o fabricante** do chip/aparelho pelo company ID e UUIDs | [Bluetooth SIG Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/) (lista oficial, também em YAML) | PC, offline | nenhum |
 | 2 | **Bater o anúncio com decodificadores prontos** (mais de 100 aparelhos BLE conhecidos) | [Theengs Decoder](https://github.com/theengs/decoder) (GPL-3.0; tem o Theengs Explorer, que mostra bruto × decodificado) | PC, offline | nenhum |
-| 3 | **Ver o que o app oficial conversa com a moto** — log Bluetooth do **próprio celular** do dono | Android "Registro de espionagem HCI Bluetooth" (Opções do desenvolvedor) + [Wireshark](https://www.wireshark.org/) filtro `btatt`; guia: [Gadgetbridge — Inspect Bluetooth packets](https://gadgetbridge.org/internals/development/bluetooth/) | celular do dono → PC | nenhum para a moto (é o app oficial que conversa, como sempre); o log tem dados privados → só OneDrive |
+| 3 | **Ver o que o app oficial conversa com a moto** — log Bluetooth do **próprio celular** do dono. Roteiro passo a passo: [LOG-HCI-APP-OFICIAL.md](LOG-HCI-APP-OFICIAL.md) (`scripts/moto/hci-puxar.ps1` + `hci_decode.py`, sem Wireshark) | Android "Registro de espionagem HCI Bluetooth" (Opções do desenvolvedor) + [Wireshark](https://www.wireshark.org/) filtro `btatt`; guia: [Gadgetbridge — Inspect Bluetooth packets](https://gadgetbridge.org/internals/development/bluetooth/) | celular do dono → PC | nenhum para a moto (é o app oficial que conversa, como sempre); o log tem dados privados → só OneDrive |
 | 4 | **Comparar com protocolos já documentados pela comunidade**, se o nível 1–3 indicar a família do BMS/controladora | BMS: [syssi/esphome-jbd-bms](https://github.com/syssi/esphome-jbd-bms), [syssi/esphome-jk-bms](https://github.com/syssi/esphome-jk-bms). Controladora: [jackhumbert/fardriver-controllers](https://github.com/jackhumbert/fardriver-controllers) e o fórum [Endless-sphere](https://endless-sphere.com/sphere/threads/fardriver-controller-serial-protocol-reverse-engineering.121825/) (Votol parece usar o mesmo display) | PC, offline | nenhum |
 | 5 | **Leitura ativa só-leitura** (conectar e pedir dados com um comando de leitura público) | nRF Connect / nosso gateway ESP32 | moto | **exige decisão do dono** depois dos níveis 1–4; nunca nesta captura |
 
@@ -154,7 +154,8 @@ Copie `scripts/moto/notas-modelo.md` para `hw-logs/moto/<data>/notas.md` e preen
    de som) e, no APK, Conectividade → **Som da moto → Tocar som de teste**; depois teste o Spotify. Anote se saiu som,
    a qualidade e se o volume do celular controla.
 5. **App oficial:** se ainda tiver o app Minha Voltz/Hello Voltz, abra e anote se funciona (prints na pasta do OneDrive).
-   **Se funcionar e falar com a moto por Bluetooth**, faça a gravação do nível 3 (é a evidência mais valiosa):
+   **Se funcionar e falar com a moto por Bluetooth**, faça a gravação do nível 3 (é a evidência mais valiosa).
+   Roteiro completo, com extração e decodificação automáticas: [LOG-HCI-APP-OFICIAL.md](LOG-HCI-APP-OFICIAL.md). Resumo:
    1. Celular → Opções do desenvolvedor → **Registro de espionagem HCI Bluetooth** = ativado; desligue e ligue o Bluetooth.
    2. Abra o app oficial, conecte na moto e passe pelas telas de bateria/SoH/ciclos/km **anotando a hora** de cada
       tela e o valor mostrado (é isso que permite achar o número dentro dos bytes depois).
